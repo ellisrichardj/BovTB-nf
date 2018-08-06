@@ -9,6 +9,7 @@
 *
 *	Version 0.1.0	31/07/18	Initial version
 *	Version 0.2.0	04/08/18	Added SNP filtering and annotation
+*	Version 0.3.0	06/08/18	Generate summary of samples in batch
 */
 
 
@@ -21,10 +22,6 @@ stage1pat = file(params.stage1pat)
 stage2pat = file(params.stage2pat)
 
 pypath = file(params.pypath)
-
-//min_cov_snp = 5 
-//alt_prop_snp = 0.2 
-//min_qual_snp= 150
 
 
 /*	Collect pairs of fastq files and infer sample names */
@@ -157,9 +154,9 @@ process ReadStats{
 	num_map=$(samtools view -c -F4 !{pair_id}.mapped.sorted.bam)
 	avg_depth=$(samtools depth  !{pair_id}.mapped.sorted.bam  |  awk '{sum+=$3} END { print sum/NR}')
 
-	num_raw=$(($raw_R1 * 2))
-	num_uniq=$(($uniq_R1 * 2))
-	num_trim=$(($trim_R1 * 2))
+	num_raw=$(($raw_R1*2))
+	num_uniq=$(($uniq_R1*2))
+	num_trim=$(($trim_R1*2))
 	pc_aft_dedup=$(echo "scale=2; ($num_uniq*100/$num_raw)" |bc)
 	pc_aft_trim=$(echo "scale=2; ($num_trim*100/$num_raw)" |bc)
 	pc_mapped=$(echo "scale=2; ($num_map*100/$num_raw)" |bc)
@@ -179,12 +176,13 @@ process SNPfiltAnnot{
 	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf2
 
 	output:
-	set pair_id, file("${pair_id}.pileup_SN.csv"), file("${pair_id}.pileup_DUO.csv"), file("${paid_id}.pileup_INDEL.csv"), file("${paid_id}.pileup_Annotation.csv") into VarTables 
+	set pair_id, file("${pair_id}.pileup_SN.csv"), file("${pair_id}.pileup_DUO.csv"), file("${pair_id}.pileup_INDEL.csv"), file("${paid_id}.pileup_Annotation.csv") into VarTables
+	set pair_id, file("${pair_id}.pileup_SN_Annotation.csv") into VarAnnotation
 
 	"""
 	gunzip -c ${pair_id}.pileup.vcf.gz > ${pair_id}.pileup.vcf
 	python $pypath/snpsFilter.py ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} ${pair_id}.pileup.vcf
-	python $pypath/annotateSNPs.py ${pair_id}.pileup.vcf $refgbk $ref
+	python $pypath/annotateSNPs.py ${pair_id}.pileup_SN.csv $refgbk $ref
 	rm ${pair_id}.pileup.vcf
 	"""
 }
@@ -220,10 +218,25 @@ $stage2pat
 **$str(th_line_contamination)** 
 **$str(stats_test)**
 
-
 }
 */
 
+/* Run summary */
+process CombineRun{
+
+	errorStrategy 'ignore'
+
+	input:
+	file("${pair_id}_stats.csv") from stats
+
+	output:
+	file("RunStats.csv") into SummaryStats
+
+	"""
+	cat *_stats.csv > RunStats.csv
+	"""
+
+}
 
 workflow.onComplete {
 		log.info "Completed sucessfully:	$workflow.success"		
