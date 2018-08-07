@@ -116,16 +116,18 @@ process VarCall {
 process VCF2Consensus {
 	errorStrategy 'ignore'
 
-	maxForks 4
+	maxForks 2
 
 	input:
 	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf
 
 	output:
-	set pair_id, file("${pair_id}_consensus.fas") into consensus
+	set pair_id, file("${pair_id}_consensus.fas"), file("${pair_id}.fq"), file("${pair_id}.fasta") into consensus
 
 	"""
 	bcftools index ${pair_id}.pileup.vcf.gz
+	bcftools view -O v ${pair_id}.pileup.vcf.gz | perl $pypath/vcfutils.pl vcf2fq - > ${pair_id}.fq
+	python $pypath/fqTofasta.py ${pair_id}.fq
 	bcftools consensus -f $ref -o ${pair_id}_consensus.fas ${pair_id}.pileup.vcf.gz
 	"""
 }
@@ -161,9 +163,16 @@ process ReadStats{
 	pc_aft_trim=$(echo "scale=2; ($num_trim*100/$num_raw)" |bc)
 	pc_mapped=$(echo "scale=2; ($num_map*100/$num_raw)" |bc)
 
-	echo "!{pair_id},"$num_raw","$num_uniq","$pc_aft_dedup","$num_trim","$pc_aft_trim","$num_map","$pc_mapped","$avg_depth"" > !{pair_id}_stats.csv
+	echo "Sample,No. raw reads,No. reads after deduplication,% After deduplication,No. reads after trimming,% After trimming,No. mapped reads,% Mapped reads,Mean Coverage" > !{pair_id}_stats.csv
+	echo "!{pair_id},"$num_raw","$num_uniq","$pc_aft_dedup","$num_trim","$pc_aft_trim","$num_map","$pc_mapped","$avg_depth"" >> !{pair_id}_stats.csv
 	'''
 }
+
+/* Combine sample statistics into a single results file */
+Channel
+	.from stats
+	.collectFile(name:'RunStats.csv', sort: true, storeDir: "$PWD/Results", keepHeader: true)	
+
 
 /* SNP filtering and annotation */
 process SNPfiltAnnot{
@@ -176,14 +185,12 @@ process SNPfiltAnnot{
 	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf2
 
 	output:
-	set pair_id, file("${pair_id}.pileup_SN.csv"), file("${pair_id}.pileup_DUO.csv"), file("${pair_id}.pileup_INDEL.csv"), file("${paid_id}.pileup_Annotation.csv") into VarTables
+	set pair_id, file("${pair_id}.pileup_SN.csv"), file("${pair_id}.pileup_DUO.csv"), file("${pair_id}.pileup_INDEL.csv") into VarTables
 	set pair_id, file("${pair_id}.pileup_SN_Annotation.csv") into VarAnnotation
 
 	"""
-	gunzip -c ${pair_id}.pileup.vcf.gz > ${pair_id}.pileup.vcf
-	python $pypath/snpsFilter.py ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} ${pair_id}.pileup.vcf
+	bcftools view -O v ${pair_id}.pileup.vcf.gz | python $pypath/snpsFilter.py ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} -
 	python $pypath/annotateSNPs.py ${pair_id}.pileup_SN.csv $refgbk $ref
-	rm ${pair_id}.pileup.vcf
 	"""
 }
 
@@ -191,23 +198,24 @@ process SNPfiltAnnot{
 process Genotyping{
 
 	input:
+**Stage1
+.pileup.vcf.gz  ??Anything else??
 
 	output:
+**Stage1
+_QC.csv
+_stage1.csv
+_stage1Q.csv
+**
 
 
 	"""
-**variables need defining**
+	python $pypath/Stage1_TBRun_2.py $PWD ${stage1pat} ${ref} ${DataDir} 1 ${min_mean_cov} ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} ${min_qual_nonsnp}  ??good to go - just need to define input???
 
-	python Stage1_TBRun_2.py 
-**$results_path** 
-$stage1pat $ref 
-**$run_name** 
-**$str(ncores_stage2)** 
-**$str(th_mean_coverage_mapping)** 
-${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} 
-**$str(th_quality_nonSNP)**
 
-	python Stage2_TBRun_2.py 
+
+**variables need defining for Stage 2**
+	python $pypath/Stage2_TBRun_2.py 
 **$data_path** 
 **$results_path** 
 $stage2pat 
@@ -221,22 +229,7 @@ $stage2pat
 }
 */
 
-/* Run summary */
-process CombineRun{
 
-	errorStrategy 'ignore'
-
-	input:
-	file("${pair_id}_stats.csv") from stats
-
-	output:
-	file("RunStats.csv") into SummaryStats
-
-	"""
-	cat *_stats.csv > RunStats.csv
-	"""
-
-}
 
 workflow.onComplete {
 		log.info "Completed sucessfully:	$workflow.success"		
