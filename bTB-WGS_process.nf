@@ -103,7 +103,7 @@ process VarCall {
 	set pair_id, file("${pair_id}.mapped.sorted.bam") from mapped_bam
 
 	output:
-	set pair_id, file("${pair_id}.pileup.vcf.gz") into vcf, vcf2
+	set pair_id, file("${pair_id}.pileup.vcf.gz") into vcf, vcf2, vcf3
 
 	"""
 	samtools index ${pair_id}.mapped.sorted.bam
@@ -140,7 +140,7 @@ process ReadStats{
 	maxForks 4
 
 	input:
-	set pair_id, file(forward) from raw_reads
+	set pair_id, file(forward), file(reverse) from raw_reads
 	file("${pair_id}_uniq_R1.fastq") from uniq_reads
 	file("${pair_id}_trim_R1.fastq") from trim_reads
 	file("${pair_id}.mapped.sorted.bam") from bam4stats
@@ -150,9 +150,9 @@ process ReadStats{
 
 	shell:
 	'''
-	raw_R1=$(zgrep -c "^+" !{forward})	
-	uniq_R1=$(grep -c "^+" !{pair_id}_uniq_R1.fastq)
-	trim_R1=$(grep -c "^+" !{pair_id}_trim_R1.fastq)
+	raw_R1=$(zgrep -c "^+\n" !{forward})	
+	uniq_R1=$(grep -c "^+\n" !{pair_id}_uniq_R1.fastq)
+	trim_R1=$(grep -c "^+\n" !{pair_id}_trim_R1.fastq)
 	num_map=$(samtools view -c -F4 !{pair_id}.mapped.sorted.bam)
 	avg_depth=$(samtools depth  !{pair_id}.mapped.sorted.bam  |  awk '{sum+=$3} END { print sum/NR}')
 
@@ -171,8 +171,8 @@ process ReadStats{
 /* Combine sample statistics into a single results file */
 Channel
 	.from stats
-	.collectFile(name:'RunStats.csv', sort: true, storeDir: "$PWD/Results", keepHeader: true)	
-
+	.collectFile(name:'RunStats.csv', sort: true, storeDir: "$PWD/Results", keepHeader: true)
+	.set { RunStats }
 
 /* SNP filtering and annotation */
 process SNPfiltAnnot{
@@ -189,7 +189,10 @@ process SNPfiltAnnot{
 	set pair_id, file("${pair_id}.pileup_SN_Annotation.csv") into VarAnnotation
 
 	"""
-	bcftools view -O v ${pair_id}.pileup.vcf.gz | python $pypath/snpsFilter.py ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} -
+	bcftools view -O v ${pair_id}.pileup.vcf.gz | python $pypath/snpsFilter.py - ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp}
+	mv _DUO.csv ${pair_id}.pileup_DUO.csv
+	mv _INDEL.csv ${pair_id}.pileup_INDEL.csv
+	mv _SN.csv ${pair_id}.pileup_SN.csv
 	python $pypath/annotateSNPs.py ${pair_id}.pileup_SN.csv $refgbk $ref
 	"""
 }
@@ -198,10 +201,12 @@ process SNPfiltAnnot{
 process Genotyping{
 
 	input:
-**Stage1
-.pileup.vcf.gz  ??Anything else??
+	pair_id, file("${pair_id}.pileup.vcf.gz") from vcf3
+	file("RunStats.csv") from RunStats
+
 
 	output:
+	pair_id, file( .meg .csv _Q.csv)
 **Stage1
 _QC.csv
 _stage1.csv
