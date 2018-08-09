@@ -27,7 +27,6 @@ fOutDUO=open(fnameODUO,"w")
 writerDUO = csv.writer(fOutDUO, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL, lineterminator='\n')
 fOutIND=open(fnameOIND,"w")
 writerIND = csv.writer(fOutIND, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL, lineterminator='\n')
-#with open(fnameI) as infile:
 for line in fileinput.input(fnameI):
         if line[0]!="#":
             if "INDEL" not in line and "DP4" in line: 
