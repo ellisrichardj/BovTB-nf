@@ -1,13 +1,16 @@
+
 import os
 import csv
 import sys
+import fileinput
+
 args=sys.argv
 if len(args)>2:
-    thmin=int(sys.argv[1])
-    thprop=float(sys.argv[2])
-    thqual=int(sys.argv[3])
-    fnameI=sys.argv[4]
-
+    fnameI=sys.argv[1]
+    thmin=int(sys.argv[2])
+    thprop=float(sys.argv[3])
+    thqual=int(sys.argv[4])
+    
 else:
     thqual=150
     thprop=0.2
@@ -24,8 +27,8 @@ fOutDUO=open(fnameODUO,"w")
 writerDUO = csv.writer(fOutDUO, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL, lineterminator='\n')
 fOutIND=open(fnameOIND,"w")
 writerIND = csv.writer(fOutIND, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL, lineterminator='\n')
-with open(fnameI) as infile:
-    for line in infile:
+#with open(fnameI) as infile:
+for line in fileinput.input(fnameI):
         if line[0]!="#":
             if "INDEL" not in line and "DP4" in line: 
                 line=line.split()
