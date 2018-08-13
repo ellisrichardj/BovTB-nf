@@ -67,7 +67,7 @@ process Trim {
 	file("${pair_id}_trim_R1.fastq") into trim_reads
 	
 	"""
-	java -jar ~/MyScripts/trimmomatic-0.30.jar PE -threads 4 -phred33 ${pair_id}_uniq_R1.fastq ${pair_id}_uniq_R2.fastq  ${pair_id}_trim_R1.fastq ${pair_id}_fail1.fastq ${pair_id}_trim_R2.fastq ${pair_id}_fail2.fastq ILLUMINACLIP:/home/richard/ReferenceSequences/adapter.fasta:2:30:10 SLIDINGWINDOW:10:20 MINLEN:36
+	java -jar ~/MyScripts/Trimmomatic-0.38/trimmomatic-0.38.jar PE -threads 4 -phred33 ${pair_id}_uniq_R1.fastq ${pair_id}_uniq_R2.fastq  ${pair_id}_trim_R1.fastq ${pair_id}_fail1.fastq ${pair_id}_trim_R2.fastq ${pair_id}_fail2.fastq ILLUMINACLIP:/home/richard/ReferenceSequences/adapter.fasta:2:30:10 SLIDINGWINDOW:10:20 MINLEN:36
 	rm ${pair_id}_fail1.fastq
 	rm ${pair_id}_fail2.fastq
 	"""
