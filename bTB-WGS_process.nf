@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-/*	This is nextflow pipeline to process Illumina paired-end data from Mycobacterium bovis isolates  
+/*	This is APHA's nextflow pipeline to process Illumina paired-end data from Mycobacterium bovis isolates.  
 *	It will first deduplicate the reads using fastuniq, trim them using trimmomatic and then map to the reference genome.
 *	Variant positions wrt the reference are determined, togther with data on the number of reads mapping and the depth of 
 *	coverage.  
@@ -10,6 +10,8 @@
 *	Version 0.1.0	31/07/18	Initial version
 *	Version 0.2.0	04/08/18	Added SNP filtering and annotation
 *	Version 0.3.0	06/08/18	Generate summary of samples in batch
+*	Version 0.4.0	16/08/18	Minor improvements
+*	Version 0.5.0	14/09/18	Infer genotypes using genotype-specific SNPs (GSS)
 */
 
 
@@ -153,7 +155,7 @@ process ReadStats{
 	raw_R1=$(zgrep -c "^+\n" !{forward})	
 	uniq_R1=$(grep -c "^+\n" !{pair_id}_uniq_R1.fastq)
 	trim_R1=$(grep -c "^+\n" !{pair_id}_trim_R1.fastq)
-	num_map=$(samtools view -c -F4 !{pair_id}.mapped.sorted.bam)
+	num_map=$(samtools view -c !{pair_id}.mapped.sorted.bam)
 	avg_depth=$(samtools depth  !{pair_id}.mapped.sorted.bam  |  awk '{sum+=$3} END { print sum/NR}')
 
 	num_raw=$(($raw_R1*2))
@@ -163,7 +165,7 @@ process ReadStats{
 	pc_aft_trim=$(echo "scale=2; ($num_trim*100/$num_raw)" |bc)
 	pc_mapped=$(echo "scale=2; ($num_map*100/$num_raw)" |bc)
 
-	echo "Sample,No. raw reads,No. reads after deduplication,% After deduplication,No. reads after trimming,% After trimming,No. mapped reads,% Mapped reads,Mean Coverage" > !{pair_id}_stats.csv
+	echo "Sample,NumRawReads,NumReadsDedup,pcDedup,NumReadsTrim,pcTrim,NumReadsMapped,pcMapped,MeanCov" > !{pair_id}_stats.csv
 	echo "!{pair_id},"$num_raw","$num_uniq","$pc_aft_dedup","$num_trim","$pc_aft_trim","$num_map","$pc_mapped","$avg_depth"" >> !{pair_id}_stats.csv
 	'''
 }
@@ -196,30 +198,38 @@ process SNPfiltAnnot{
 	python $pypath/annotateSNPs.py ${pair_id}.pileup_SN.csv $refgbk $ref
 	"""
 }
+/* Collect vcf files together */
+Channel
+	.from vcf3 
+	.set { AllVCF }
 
-/* Genotyping - inference of spoligo and VNTR types
+	
+
+/* Genotyping - inference of spoligo and VNTR types */
 process Genotyping{
 
 	input:
-	pair_id, file("${pair_id}.pileup.vcf.gz") from vcf3
+	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf3
 	file("RunStats.csv") from RunStats
 
-
 	output:
-	pair_id, file( .meg .csv _Q.csv)
-**Stage1
+	set pair_id, file("${pair_id}.meg"), file("${pair_id}.csv"), file("${pair_id}_Q.csv")
+/**Stage1
 _QC.csv
 _stage1.csv
 _stage1Q.csv
-**
+**/
 
 
 	"""
-	python $pypath/Stage1_TBRun_2.py $PWD ${stage1pat} ${ref} ${DataDir} 1 ${min_mean_cov} ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} ${min_qual_nonsnp}  ??good to go - just need to define input???
+	python $pypath/Stage1-test.py
+	mv .meg ${pair_id}.meg
+	mv .csv ${pair_id}.csv
+	mv _Q.csv ${pair_id}_Q.csv
+	"""
 
 
-
-**variables need defining for Stage 2**
+/**variables need defining for Stage 2**
 	python $pypath/Stage2_TBRun_2.py 
 **$data_path** 
 **$results_path** 
@@ -229,10 +239,10 @@ $stage2pat
 **$str(th_mean_coverage_mapping)** 
 **$str(stage1_done).lower()** 
 **$str(th_line_contamination)** 
-**$str(stats_test)**
+**$str(stats_test)**/
 
 }
-*/
+
 
 
 
