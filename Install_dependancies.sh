@@ -1,3 +1,10 @@
+#!/bin/bash
+set -e
+
+# This script will fetch and install the dependancies required for the BovTB-nf process.
+# The dependancies are generally standard bioinformatics tools
+
+
 # FastUniq
 
 wget https://sourceforge.net/projects/fastuniq/files/FastUniq-1.1.tar.gz && tar xzf FastUniq-1.1.tar.gz && rm -f FastUniq-1.1.tar.gz
