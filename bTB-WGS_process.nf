@@ -3,7 +3,8 @@
 /*	This is APHA's nextflow pipeline to process Illumina paired-end data from Mycobacterium bovis isolates.  
 *	It will first deduplicate the reads using fastuniq, trim them using trimmomatic and then map to the reference genome.
 *	Variant positions wrt the reference are determined, togther with data on the number of reads mapping and the depth of 
-*	coverage.  
+*	coverage.  Using a panel of predetermined genotype specific SNPs it will also infer the likely spoligotype and VNTR
+*	type.
 *
 *	written by ellisrichardj, based on pipeline developed by Javier Nunez
 *
@@ -12,6 +13,7 @@
 *	Version 0.3.0	06/08/18	Generate summary of samples in batch
 *	Version 0.4.0	16/08/18	Minor improvements
 *	Version 0.5.0	14/09/18	Infer genotypes using genotype-specific SNPs (GSS)
+*	Version 0.5.1	21/09/18	Fixed bug that prevented GSS from running correctly
 */
 
 
@@ -52,6 +54,8 @@ process Deduplicate {
 	gunzip -c ${reverse} > ${pair_id}_R2.fastq
 	echo '${pair_id}_R1.fastq\n${pair_id}_R2.fastq' > fqin.lst
 	~/FastUniq/source/fastuniq -i fqin.lst -o ${pair_id}_uniq_R1.fastq -p ${pair_id}_uniq_R2.fastq
+	rm ${pair_id}_R1.fastq
+	rm ${pair_id}_R2.fastq
 	"""
 }	
 
@@ -89,9 +93,9 @@ process Map2Ref {
 	file("${pair_id}.mapped.sorted.bam") into bam4stats
 
 	"""
-	bwa mem -T10 -t4 $ref  ${pair_id}_trim_R1.fastq ${pair_id}_trim_R2.fastq |
-	 samtools view -@4 -ShuF 4 - |
-	 samtools sort -@4 - -o ${pair_id}.mapped.sorted.bam
+	bwa mem -T10 -t2 $ref  ${pair_id}_trim_R1.fastq ${pair_id}_trim_R2.fastq |
+	 samtools view -@2 -ShuF 4 - |
+	 samtools sort -@2 - -o ${pair_id}.mapped.sorted.bam
 	"""
 }
 
@@ -105,8 +109,9 @@ process VarCall {
 	set pair_id, file("${pair_id}.mapped.sorted.bam") from mapped_bam
 
 	output:
-	set pair_id, file("${pair_id}.pileup.vcf.gz") into vcf, vcf2, vcf3
-
+	set pair_id, file("${pair_id}.pileup.vcf.gz") into vcf
+	set pair_id, file("${pair_id}.pileup.vcf.gz") into vcf2
+	set pair_id, file("${pair_id}.pileup.vcf.gz") into vcf3
 	"""
 	samtools index ${pair_id}.mapped.sorted.bam
 	samtools mpileup -q 10 -uvf $ref ${pair_id}.mapped.sorted.bam |
@@ -114,14 +119,14 @@ process VarCall {
 	"""
 }
 
-/* Consensus calling */
+/* Consensus calling 
 process VCF2Consensus {
 	errorStrategy 'ignore'
 
 	maxForks 2
 
 	input:
-	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf
+	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf2
 
 	output:
 	set pair_id, file("${pair_id}_consensus.fas"), file("${pair_id}.fq"), file("${pair_id}.fasta") into consensus
@@ -132,7 +137,7 @@ process VCF2Consensus {
 	python $pypath/fqTofasta.py ${pair_id}.fq
 	bcftools consensus -f $ref -o ${pair_id}_consensus.fas ${pair_id}.pileup.vcf.gz
 	"""
-}
+}*/
 
 
 /* Mapping Statistics*/
@@ -148,7 +153,7 @@ process ReadStats{
 	file("${pair_id}.mapped.sorted.bam") from bam4stats
 
 	output:
-	file("${pair_id}_stats.csv") into stats
+	set pair_id, file("${pair_id}_stats.csv") into stats
 
 	shell:
 	'''
@@ -165,18 +170,13 @@ process ReadStats{
 	pc_aft_trim=$(echo "scale=2; ($num_trim*100/$num_raw)" |bc)
 	pc_mapped=$(echo "scale=2; ($num_map*100/$num_raw)" |bc)
 
-	echo "Sample,NumRawReads,NumReadsDedup,pcDedup,NumReadsTrim,pcTrim,NumReadsMapped,pcMapped,MeanCov" > !{pair_id}_stats.csv
+	echo "Sample,NumRawReads,NumReadsDedup,%afterDedup,NumReadsTrim,%afterTrim,NumReadsMapped,%Mapped,MeanCov" > !{pair_id}_stats.csv
 	echo "!{pair_id},"$num_raw","$num_uniq","$pc_aft_dedup","$num_trim","$pc_aft_trim","$num_map","$pc_mapped","$avg_depth"" >> !{pair_id}_stats.csv
 	'''
 }
 
-/* Combine sample statistics into a single results file */
-Channel
-	.from stats
-	.collectFile(name:'RunStats.csv', sort: true, storeDir: "$PWD/Results", keepHeader: true)
-	.set { RunStats }
 
-/* SNP filtering and annotation */
+/* SNP filtering and annotation 
 process SNPfiltAnnot{
 
 	errorStrategy 'ignore'
@@ -184,7 +184,7 @@ process SNPfiltAnnot{
 	maxForks 4
 
 	input:
-	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf2
+	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf3
 
 	output:
 	set pair_id, file("${pair_id}.pileup_SN.csv"), file("${pair_id}.pileup_DUO.csv"), file("${pair_id}.pileup_INDEL.csv") into VarTables
@@ -197,36 +197,35 @@ process SNPfiltAnnot{
 	mv _SN.csv ${pair_id}.pileup_SN.csv
 	python $pypath/annotateSNPs.py ${pair_id}.pileup_SN.csv $refgbk $ref
 	"""
-}
-/* Collect vcf files together */
+}*/
+
+/* Collect vcf files together 
 Channel
 	.from vcf3 
-	.set { AllVCF }
+	.set { AllVCF }*/
 
 	
 
 /* Genotyping - inference of spoligo and VNTR types */
 process Genotyping{
+	errorStrategy 'ignore'
+
+	maxForks 4
 
 	input:
-	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf3
-	file("RunStats.csv") from RunStats
+	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf
+	file("${pair_id}_stats.csv") from stats
 
 	output:
-	set pair_id, file("${pair_id}.meg"), file("${pair_id}.csv"), file("${pair_id}_Q.csv")
-/**Stage1
-_QC.csv
-_stage1.csv
-_stage1Q.csv
-**/
-
+	set pair_id, file("${pair_id}.csv") into Genotyping
 
 	"""
-	python $pypath/Stage1-test.py
-	mv .meg ${pair_id}.meg
+	python $pypath/Stage1-test.py ${pair_id}_stats.csv2 ${stage1pat} AF2122.fna test 1 ${min_mean_cov} ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} ${min_qual_nonsnp} ${pair_id}.pileup.vcf.gz
+	"""
+/*	this moved from the commands - need to move back when locations are known
+	mv .meg ${pair_id}.meg 
 	mv .csv ${pair_id}.csv
-	mv _Q.csv ${pair_id}_Q.csv
-	"""
+	mv _Q.csv ${pair_id}_Q.csv */
 
 
 /**variables need defining for Stage 2**
@@ -243,6 +242,11 @@ $stage2pat
 
 }
 
+/* Combine all data into a single results file */
+Channel
+	.from Genotyping
+	.collectFile(name:'RunStats.csv', sort: true, storeDir: "$PWD/Results", keepHeader: true)
+	.set { RunStats }
 
 
 
