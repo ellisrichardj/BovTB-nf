@@ -119,7 +119,7 @@ process VarCall {
 	"""
 }
 
-/* Consensus calling 
+/* Consensus calling */
 process VCF2Consensus {
 	errorStrategy 'ignore'
 
@@ -137,7 +137,7 @@ process VCF2Consensus {
 	python $pypath/fqTofasta.py ${pair_id}.fq
 	bcftools consensus -f $ref -o ${pair_id}_consensus.fas ${pair_id}.pileup.vcf.gz
 	"""
-}*/
+}
 
 
 /* Mapping Statistics*/
@@ -176,7 +176,7 @@ process ReadStats{
 }
 
 
-/* SNP filtering and annotation 
+/* SNP filtering and annotation */
 process SNPfiltAnnot{
 
 	errorStrategy 'ignore'
@@ -197,14 +197,8 @@ process SNPfiltAnnot{
 	mv _SN.csv ${pair_id}.pileup_SN.csv
 	python $pypath/annotateSNPs.py ${pair_id}.pileup_SN.csv $refgbk $ref
 	"""
-}*/
+}
 
-/* Collect vcf files together 
-Channel
-	.from vcf3 
-	.set { AllVCF }*/
-
-	
 
 /* Genotyping - inference of spoligo and VNTR types */
 process Genotyping{
@@ -214,18 +208,18 @@ process Genotyping{
 
 	input:
 	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf
-	file("${pair_id}_stats.csv") from stats
+	set pair_id, file("${pair_id}_stats.csv") from stats
 
 	output:
-	set pair_id, file("${pair_id}.csv") into Genotyping
+	file("${pair_id}_stage1.csv") into Genotyping
+	set pair_id, file("${pair_id}.meg") into GSSalign
 
 	"""
-	python $pypath/Stage1-test.py ${pair_id}_stats.csv2 ${stage1pat} AF2122.fna test 1 ${min_mean_cov} ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} ${min_qual_nonsnp} ${pair_id}.pileup.vcf.gz
+	gunzip -c ${pair_id}.pileup.vcf.gz > ${pair_id}.pileup.vcf
+	python $pypath/Stage1-test.py ${pair_id}_stats.csv ${stage1pat} AF2122.fna test 1 ${min_mean_cov} ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} ${min_qual_nonsnp} ${pair_id}.pileup.vcf
+	mv test/Stage1/test_stage1.meg ${pair_id}.meg 
+	mv _stage1.csv ${pair_id}_stage1.csv
 	"""
-/*	this moved from the commands - need to move back when locations are known
-	mv .meg ${pair_id}.meg 
-	mv .csv ${pair_id}.csv
-	mv _Q.csv ${pair_id}_Q.csv */
 
 
 /**variables need defining for Stage 2**
@@ -245,7 +239,7 @@ $stage2pat
 /* Combine all data into a single results file */
 Channel
 	.from Genotyping
-	.collectFile(name:'RunStats.csv', sort: true, storeDir: "$PWD/Results", keepHeader: true)
+	.collectFile( name: 'InferredGenotypes.csv', sort: true, storeDir: "$PWD/Results", keepHeader: true, newLine: true )
 	.set { RunStats }
 
 
