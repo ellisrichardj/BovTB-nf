@@ -17,7 +17,7 @@ if len(args)<2:
     thCovProp=0.2
     thqualsnp=150
     thqualnonsnp=0
-    strainVCF="*.vcf.gz"
+    strainVCF="*.vcf"
 else:    
     pathTBRuns=(os.path.dirname(os.getcwd()))
     instats=sys.argv[1]
@@ -102,7 +102,7 @@ def findGenotypeOneSample(strainsDetailsTittle,strainDetails,pathTBRuns,patterns
     print "Procesing "+strainDetails[pfileName]
  
 #changed this to remove the need to look in defined directory structure    
-    strainStatsFileName=strainDetails[pfileName]+".pileup.vcf.gz"
+    strainStatsFileName=strainDetails[pfileName]+".pileup.vcf" #.gz
     
     posToExtract=map(int,patternsDetails[0][1:])
     posToExtractBritishBTB=map(int,patternsBritishBTBDetails[0][1:])
@@ -152,15 +152,15 @@ def findGenotypeOneSample(strainsDetailsTittle,strainDetails,pathTBRuns,patterns
         maxPat=strainDetails+[flag]+6*["NA"]
         print maxPat
         return [maxPat,"NA"] 
-    cmd="rm "+strainStatsFileName
-    os.system(cmd)
+#    cmd="rm "+strainStatsFileName
+#    os.system(cmd)
 
-def getSnpsStatsStrain(strainStatsFileNameGz,listas,pathAux,thMinGoodCov,thCovProp,thqualsnp,thqualnonsnp):
+def getSnpsStatsStrain(strainStatsFileName,listas,pathAux,thMinGoodCov,thCovProp,thqualsnp,thqualnonsnp):
     #strainVCF=os.path.join(pathAux,strainStatsFileNameGz.split(os.sep)[-1][:-3])
-    print "loading "+ strainStatsFileNameGz
+    print "loading "+ strainStatsFileName
     
-    cmd = "gunzip -c "+strainStatsFileNameGz+" > "+ strainVCF
-    os.system(cmd)
+#    cmd = "gunzip -c "+strainStatsFileNameGz+" > "+ strainVCF
+#    os.system(cmd)
 
     fileIn = open(strainVCF, 'r')
     csv=fileIn.readlines()
