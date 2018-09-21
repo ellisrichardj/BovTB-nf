@@ -239,7 +239,7 @@ $stage2pat
 /* Combine all data into a single results file */
 Channel
 	.from Genotyping
-	.collectFile( name: 'InferredGenotypes.csv', sort: true, storeDir: "$PWD/Results", keepHeader: true, newLine: true )
+	.collectFile( name: 'InferredGenotypes.csv', sort: true, storeDir: "$PWD/Results", keepHeader: true )
 	.set { RunStats }
 
 
