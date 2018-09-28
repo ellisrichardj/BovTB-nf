@@ -20,6 +20,7 @@ Alternatively, clone the repository:
 	git clone https://github.com/ellisrichardj/BovTB-nf.git
 
 If required, there is simple script for installing the dependancies (helpfully called Install_dependancies.sh), which will also update the nextflow config file with their locations.
+
 -------------
 
 BovTB-nf is designed to process a batch (1 or more samples)  of paired-end fastq files generated on an Illumina sequencer. It will first remove duplicate reads from the dataset (FastUniq) and then trim the unique reads based on base-call quality and the presence of adapters (Trimmomatic). Reads are then mapped to the *M. bovis* AF2122 reference genome and variants called (bwa/samtools/bcftools). 
