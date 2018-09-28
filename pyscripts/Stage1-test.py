@@ -86,10 +86,9 @@ def comparePatterns(refPat,strPat,groPat):
                         res.append("MM")
                     else:
                         res.append("A")
-    #import collections
     counts=collections.Counter(res)
     counts=[round(100*float(counts['M'])/lenPat,2),round(100*float(counts['MM'])/lenPat,2),round(100*float(counts['N'])/lenPat,2),round(100*float(counts['A'])/lenPat,2)]
-    return [counts,res] #["%.2f" % e for e in counts]
+    return [counts,res]
 
 
 #this is the key part that runs the per sample stage1 genotyping
@@ -101,8 +100,7 @@ def findGenotypeOneSample(strainsDetailsTittle,strainDetails,pathTBRuns,patterns
     meanCov=float(strainDetails[pmeanCov])
     print "Procesing "+strainDetails[pfileName]
  
-#changed this to remove the need to look in defined directory structure    
-    strainStatsFileName=strainDetails[pfileName]+".pileup.vcf" #.gz
+    strainStatsFileName=strainDetails[pfileName]+".pileup.vcf"
     
     posToExtract=map(int,patternsDetails[0][1:])
     posToExtractBritishBTB=map(int,patternsBritishBTBDetails[0][1:])
@@ -152,20 +150,14 @@ def findGenotypeOneSample(strainsDetailsTittle,strainDetails,pathTBRuns,patterns
         maxPat=strainDetails+[flag]+6*["NA"]
         print maxPat
         return [maxPat,"NA"] 
-#    cmd="rm "+strainStatsFileName
-#    os.system(cmd)
+
 
 def getSnpsStatsStrain(strainStatsFileName,listas,pathAux,thMinGoodCov,thCovProp,thqualsnp,thqualnonsnp):
-    #strainVCF=os.path.join(pathAux,strainStatsFileNameGz.split(os.sep)[-1][:-3])
     print "loading "+ strainStatsFileName
     
-#    cmd = "gunzip -c "+strainStatsFileNameGz+" > "+ strainVCF
-#    os.system(cmd)
-
     fileIn = open(strainVCF, 'r')
     csv=fileIn.readlines()
     fileIn.close()
-    #alllines=[t for t in alllines if t[0]!="#" and "INDEL" not in t]
     csv=dict([(t.split()[1],t.split()) for t in csv if t[0]!="#" and "INDEL" not in t])
     listasOut=[]
     for lista in listas:
@@ -206,23 +198,18 @@ def isACGT(c):
     return c.upper() in ["A","C","G","T"]
     
 def readTVSFile(fname):
-    #with open(fname, 'rb') as csvfile:
     fileIn = open(fname, 'rb')
-    #with open(fname,"rb") as infile:
-    data = csv.reader(fileIn)#, delimiter='\t')
+    data = csv.reader(fileIn)
     dataOut = [row for row in data]
     fileIn.close()
     return dataOut
 
 def writeGenotypeMatrixToMega(snpsMatrixT,patternMatrix,megaTitle,patho):
-    #snpsMatrixT=listT(snpsMatrix)
     megaMatrix=["#mega","!Title "+megaTitle+";","!Format DataType=DNA;","!Description None;"]
     megaMatrix=megaMatrix+["#"+snpsMatrixT[2][0][0]+"\t"+"".join([x[0] for x in snpsMatrixT[2][3:]])]
     for row in snpsMatrixT[3:]:
         megaMatrix = megaMatrix + ["#"+row[0][0]+"\t"+"".join([x[2] for x in row[3:]])]
     if patternMatrix[0][1:]!=reduce(operator.add,snpsMatrixT[0][3:]):
-        #print patternMatrix[1:]
-        #print reduce(operator.add,snpsMatrixT[0][3:])
         print "error"
     else:
         for row in patternMatrix[4:]:
@@ -245,8 +232,6 @@ def getBestMatchPattern(patternsDetails,strainGSSInfo):
         groPat=pattern[1:]
         groRes=comparePatterns(refPat,strainGSS,groPat)
         comp=[pattern[0],len(groPat)]+groRes[0]
-        #print patternsDetails[2]
-        #print pattern
         if comp[2]>=maxVal:
             maxVal=comp[2]
             maxPat=comp
@@ -260,10 +245,9 @@ def getBestMatchPattern(patternsDetails,strainGSSInfo):
     return [maxPat,strainQ]
 
 
-print TBRun #changed to write per sample table
+print TBRun
 refName=refName.split(".")[0]
-strainDetailsFile=instats #change to arg1??
-#pathResutls=os.path.join(pathTBRuns,TBRun,"Stage1") #this indicates where to write the results table
+strainDetailsFile=instats
 pathResutls=os.path.join(TBRun,"Stage1")
 if not os.path.exists(pathResutls): os.makedirs(pathResutls)
 pathAux=os.path.join(pathResutls,"Aux")
@@ -272,10 +256,7 @@ if not os.path.exists(pathAux): os.system("mkdir "+ pathAux)
 
 strainsInfo=readTable(strainDetailsFile,',')
 pfileName=strainsInfo[0].index('Sample')
-#prunName=strainsInfo[0].index('runName')
 pmeanCov=strainsInfo[0].index('MeanCov')
-#pequalSites=strainsInfo[0].index('per_equalsites')
-#preadLen=strainsInfo[0].index('read_mean_length')
 ppermap=strainsInfo[0].index('%Mapped')
 totalReads=strainsInfo[0].index('NumRawReads')
 strainsInfo=listT(strainsInfo)
@@ -296,20 +277,15 @@ patternsBTBDetails=listT(readTable(os.path.join(pathPatterns,patternsBTBFile),",
 maxPats=[strainsDetails[0]+["flag","group","gSSTested","matches","mismatches","noCoverage","anomalous"]]
 maxPatsQ=[[[patternsDetails[0][0]]]+[["PredGenotype"],["M-MM-N-A"]]+[[x] for x in patternsDetails[0][1:]],[[patternsDetails[1][0]]]+[[""],[""]]+[[x] for x in patternsDetails[1][1:]],[[patternsDetails[2][0]]]+[[""],[""]]+[[x] for x in patternsDetails[2][1:]]]
 
-outFileName="_stage1.csv" #removed 'strainDetails[pfileName]+' after="
-#outFileNameQ=os.path.join(pathResutls,TBRun+"_stage1Q.csv")
+outFileName="_stage1.csv"
 
 if ncpus==1:
     for strainDetails in strainsDetails[1:]:
         print strainDetails
-        #name=[strainDetails[pfileName]+"-"+strainDetails[pgenotype]]
         [maxPat,strainQ]=findGenotypeOneSample(strainsDetails[0],strainDetails,pathTBRuns,patternsDetails,patternsBritishBTBDetails,patternsBTBDetails,patternsMic_PinDetails,patternsMicrotiDetails,patternsPinnipediiDetails,refName,qth,pathAux,thMinGoodCov,thCovProp,thqualsnp,thqualnonsnp)
-        #[maxPat,strainQ]=findGenotypeOneSample(strainsDetails[0],strainDetails,patternsDetails,patternsBritishBTBDetails,patternsBTBDetails,patternsMic_PinDetails,patternsMicrotiDetails,patternsPinnipediiDetails,refName,qth,pathAux,thMinGoodCov,thCovProp,thqualsnp,thqualnonsnp)
         maxPats=maxPats+[maxPat]
-        #print [maxPat,strainQ]
         if strainQ!="NA":
             maxPatsQ=maxPatsQ+[strainQ]
-            #writeCSV(outFileNameQ,listT(maxPatsQ))
 else:
     ppservers = ()
     job_server = pp.Server(ncpus, ppservers=ppservers)
@@ -321,7 +297,6 @@ else:
         maxPats=maxPats+[maxPat]
         if strainQ!="NA":
             maxPatsQ=maxPatsQ+[strainQ]
-            #writeCSV(outFileNameQ,listT(maxPatsQ))
         cont=cont+1
 
 os.system("rm -R "+pathAux)
@@ -329,6 +304,5 @@ os.system("rm -R "+pathAux)
 writeCSV(outFileName,maxPats)
 maxPats=[maxPats[0]]+sorted(maxPats[1:],key=lambda x: x[0])
 writeCSV(outFileName,maxPats)
-#writeCSV(outFileNameQ,listT(maxPatsQ))                
 writeGenotypeMatrixToMega(maxPatsQ,patternsDetails,TBRun+"_stage1",pathResutls)
 
