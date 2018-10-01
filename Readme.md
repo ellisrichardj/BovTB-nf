@@ -1,4 +1,4 @@
-#**BovTB-nf**
+# **BovTB-nf**
 
 ------------
 
@@ -11,7 +11,7 @@ It has been built to run using nextflow, using standard bioinformatic tools for 
 -	samtools and bcftools
 -	vcfutils.pl
 
-##Installation
+## Installation
 
 Of course Nextflow itself is a prerequisite and should be installed as described in the [Nextflow Documentation](https://www.nextflow.io/docs/latest/getstarted.html)
 
@@ -27,7 +27,7 @@ If required, there is simple script for installing the dependancies (helpfully c
 
 -------------
 
-##Examples
+## Examples
 
 In its simplest form just run the Nextflow process from the directory containing the fastq files:
 
