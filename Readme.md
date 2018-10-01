@@ -1,13 +1,17 @@
-**BovTB-nf**
+#**BovTB-nf**
+
 ------------
 
-This is the updated pipeline for APHA's processing of *Mycobacterium bovis* WGS data.
-This has been built to run using nextflow, using standard bioinformatic tools for the most part. The external dependancies are:
-	FastUniq
-	Trimmomatic
-	bwa
-	samtools and bcftools
-	vcfutils.pl
+This is the updated pipeline for APHA's processing of *Mycobacterium bovis* WGS data. BovTB-nf is designed to process a batch (1 or more samples) of paired-end fastq files generated on an Illumina sequencer. It will first remove duplicate reads from the dataset (FastUniq) and then trim the unique reads based on base-call quality and the presence of adapters (Trimmomatic). Reads are then mapped to the *M. bovis* AF2122 reference genome and variants called (bwa/samtools/bcftools).
+
+It has been built to run using nextflow, using standard bioinformatic tools for the most part. The external dependancies are:
+-	FastUniq
+-	Trimmomatic
+-	bwa
+-	samtools and bcftools
+-	vcfutils.pl
+
+##Installation
 
 Of course Nextflow itself is a prerequisite and should be installed as described in the [Nextflow Documentation](https://www.nextflow.io/docs/latest/getstarted.html)
 
@@ -23,6 +27,13 @@ If required, there is simple script for installing the dependancies (helpfully c
 
 -------------
 
-BovTB-nf is designed to process a batch (1 or more samples)  of paired-end fastq files generated on an Illumina sequencer. It will first remove duplicate reads from the dataset (FastUniq) and then trim the unique reads based on base-call quality and the presence of adapters (Trimmomatic). Reads are then mapped to the *M. bovis* AF2122 reference genome and variants called (bwa/samtools/bcftools). 
+##Examples
+
+In its simplest form just run the Nextflow process from the directory containing the fastq files:
+
+	cd /path/to/Data
+	nextflow run BovTB-nf
+
+
 
 
