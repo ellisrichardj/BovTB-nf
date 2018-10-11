@@ -25,12 +25,12 @@ cd bwa; make
 
 wget https://github.com/samtools/samtools/releases/download/1.9/samtools-1.9.tar.bz2 && tar xjf samtools-1.9.tar.bz2 && rm -f samtools-1.9.tar.bz2
 cd samtools-1.9; make 
-make install
+sudo make install
 cd ..
  
 wget https://github.com/samtools/bcftools/releases/download/1.9/bcftools-1.9.tar.bz2 && tar xjf bcftools-1.9.tar.bz2 && rm -f bcftools-1.9.tar.bz2
 cd bcftools-1.9; make 
-make install
+sudo make install
 cd ..
 
 # vcfutils.pl
