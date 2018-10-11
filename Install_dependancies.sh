@@ -43,4 +43,4 @@ wget https://github.com/lh3/samtools/blob/master/bcftools/vcfutils.pl
 
 # Add locations to nextflow.config
 
-echo "params.dependPath = "$PWD"" > nextflow.config
+echo "params.dependPath = "$PWD"" >> BovTB-nf/nextflow.config
