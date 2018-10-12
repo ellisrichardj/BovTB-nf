@@ -3,6 +3,7 @@ set -e
 
 # This script will fetch and install the dependancies required for the BovTB-nf process.
 # The dependancies are generally standard bioinformatics tools
+# There are some standard prerequites for a vanilla linux install such as make, gcc, zip, 
 
 
 # FastUniq
@@ -43,4 +44,4 @@ wget https://github.com/lh3/samtools/blob/master/bcftools/vcfutils.pl
 
 # Add locations to nextflow.config
 
-echo "params.dependPath = "$PWD"" >> BovTB-nf/nextflow.config
+echo "params.dependPath = "\"$PWD"\"" >> BovTB-nf/nextflow.config
