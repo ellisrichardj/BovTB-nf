@@ -3,7 +3,9 @@ set -e
 
 # This script will fetch and install the dependancies required for the BovTB-nf process.
 # The dependancies are generally standard bioinformatics tools
-# There are some standard prerequites for a vanilla linux install such as make, gcc, zip, 
+# There are some standard prerequites for a vanilla linux install such as make, make-guile, gcc, zip, zlib-dev, zlib1g-dev,
+# libncurses5-dev, libbz2-dev, liblzma-dev
+# e.g. on Ubuntu: sudo apt install make make-guile gcc zip zlib-dev zlib1g-dev libncurses5-dev libbz2-dev liblzma-dev
 
 
 # FastUniq
