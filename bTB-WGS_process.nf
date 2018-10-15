@@ -15,6 +15,7 @@
 *	Version 0.5.0	14/09/18	Infer genotypes using genotype-specific SNPs (GSS)
 *	Version 0.5.1	21/09/18	Fixed bug that prevented GSS from running correctly
 *	Version 0.5.2	01/10/18	Mark shorter split hits as secondary in bam file (-M) and change sam flag filter to 3844
+*	Version 0.5.3	15/10/18	Increase min mapQ for mpileup to 60 to ensure unique reads only; add $dependpath variable
 */
 
 
@@ -27,6 +28,7 @@ stage1pat = file(params.stage1pat)
 stage2pat = file(params.stage2pat)
 
 pypath = file(params.pypath)
+dependpath = file(params.dependpath)
 
 
 /*	Collect pairs of fastq files and infer sample names */
@@ -54,7 +56,7 @@ process Deduplicate {
 	gunzip -c ${forward} > ${pair_id}_R1.fastq 
 	gunzip -c ${reverse} > ${pair_id}_R2.fastq
 	echo '${pair_id}_R1.fastq\n${pair_id}_R2.fastq' > fqin.lst
-	~/FastUniq/source/fastuniq -i fqin.lst -o ${pair_id}_uniq_R1.fastq -p ${pair_id}_uniq_R2.fastq
+	$dependpath/FastUniq/source/fastuniq -i fqin.lst -o ${pair_id}_uniq_R1.fastq -p ${pair_id}_uniq_R2.fastq
 	rm ${pair_id}_R1.fastq
 	rm ${pair_id}_R2.fastq
 	"""
@@ -71,10 +73,11 @@ process Trim {
 
 	output:
 	set pair_id, file("${pair_id}_trim_R1.fastq"), file("${pair_id}_trim_R2.fastq") into trim_read_pairs
+	set pair_id, file("${pair_id}_trim_R1.fastq"), file("${pair_id}_trim_R2.fastq") into trim_read_pairs2
 	set pair_id, file("${pair_id}_trim_R1.fastq") into trim_reads
 	
 	"""
-	java -jar ~/MyScripts/Trimmomatic-0.38/trimmomatic-0.38.jar PE -threads 4 -phred33 ${pair_id}_uniq_R1.fastq ${pair_id}_uniq_R2.fastq  ${pair_id}_trim_R1.fastq ${pair_id}_fail1.fastq ${pair_id}_trim_R2.fastq ${pair_id}_fail2.fastq ILLUMINACLIP:/home/richard/ReferenceSequences/adapter.fasta:2:30:10 SLIDINGWINDOW:10:20 MINLEN:36
+	java -jar $dependpath/Trimmomatic-0.38/trimmomatic-0.38.jar PE -threads 4 -phred33 ${pair_id}_uniq_R1.fastq ${pair_id}_uniq_R2.fastq  ${pair_id}_trim_R1.fastq ${pair_id}_fail1.fastq ${pair_id}_trim_R2.fastq ${pair_id}_fail2.fastq ILLUMINACLIP:/home/richard/ReferenceSequences/adapter.fasta:2:30:10 SLIDINGWINDOW:10:20 MINLEN:36
 	rm ${pair_id}_fail1.fastq
 	rm ${pair_id}_fail2.fastq
 	"""
@@ -94,7 +97,7 @@ process Map2Ref {
 	set pair_id, file("${pair_id}.mapped.sorted.bam") into bam4stats
 
 	"""
-	bwa mem -T10 -M -t2 $ref  ${pair_id}_trim_R1.fastq ${pair_id}_trim_R2.fastq |
+	$dependpath/bwa/bwa mem -T10 -M -t2 $ref  ${pair_id}_trim_R1.fastq ${pair_id}_trim_R2.fastq |
 	 samtools view -@2 -ShuF 3844 - |
 	 samtools sort -@2 - -o ${pair_id}.mapped.sorted.bam
 	"""
@@ -116,7 +119,7 @@ process VarCall {
 
 	"""
 	samtools index ${pair_id}.mapped.sorted.bam
-	samtools mpileup -q 10 -uvf $ref ${pair_id}.mapped.sorted.bam |
+	samtools mpileup -q 60 -uvf $ref ${pair_id}.mapped.sorted.bam |
 	 bcftools call --ploidy Y -cf GQ - -Oz -o ${pair_id}.pileup.vcf.gz
 	"""
 }
@@ -224,35 +227,24 @@ process GenotypingGSS{
 	"""
 }
 
-/* in-silico Spoligotyping
+/* in-silico Spoligotyping 
 process Spoligotype{
 	errorStrategy 'ignore'
 
 	maxForks 4
 
 	input:
-	set pair_id, file("${pair_id}.fasta") from consensus
+	set pair_id, file("${pair_id}_trim_R1.fastq"), file("${pair_id}_trim_R2.fastq") from trim_read_pairs2
 
 	output:
-	set pair_id. file("${pair_id}_spoligotype.csv") into spoligo
+	set pair_id, file("${pair_id}_spoligotype.csv") into spoligo
 
 	""" 
-	python $pypath/Stage2-test.py ${pair_id}_stats.csv ${stage1pat} AF2122.fna test 1 ${min_mean_cov} ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} ${min_qual_nonsnp} ${pair_id}.pileup.vcf
+	python $pypath/Stage2-test.py ${pair_id}_trim_R1.fastq ${pair_id}_trim_R2.fastq test $stage2pat test 1 ${min_mean_cov} false 1.5 1
+	""" 
 
 
-/**variables need defining for Stage 2**
-	python $pypath/Stage2_TBRun_2.py 
-**$data_path** 
-**$results_path** 
-$stage2pat 
-**$run_name** 
-**$str(ncores_stage2)** 
-**$str(th_mean_coverage_mapping)** 
-**$str(stage1_done).lower()** 
-**$str(th_line_contamination)** 
-**$str(stats_test)*
-
-} */
+}*/
 
 /* Combine all data into a single results file */
 Channel
