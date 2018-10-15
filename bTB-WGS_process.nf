@@ -28,7 +28,7 @@ stage1pat = file(params.stage1pat)
 stage2pat = file(params.stage2pat)
 
 pypath = file(params.pypath)
-dependpath = file(params.dependpath)
+dependpath = file(params.dependPath)
 
 
 /*	Collect pairs of fastq files and infer sample names */
