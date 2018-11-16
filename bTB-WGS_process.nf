@@ -3,8 +3,7 @@
 /*	This is APHA's nextflow pipeline to process Illumina paired-end data from Mycobacterium bovis isolates.  
 *	It will first deduplicate the reads using fastuniq, trim them using trimmomatic and then map to the reference genome.
 *	Variant positions wrt the reference are determined, togther with data on the number of reads mapping and the depth of 
-*	coverage.  Using a panel of predetermined genotype specific SNPs it will also infer the likely spoligotype and VNTR
-*	type.
+*	coverage.  Using a panel of predetermined cluster specific SNPs it will also infer cluster membership.
 *
 *	written by ellisrichardj, based on pipeline developed by Javier Nunez
 *
@@ -16,6 +15,8 @@
 *	Version 0.5.1	21/09/18	Fixed bug that prevented GSS from running correctly
 *	Version 0.5.2	01/10/18	Mark shorter split hits as secondary in bam file (-M) and change sam flag filter to 3844
 *	Version 0.5.3	15/10/18	Increase min mapQ for mpileup to 60 to ensure unique reads only; add $dependpath variable
+*	Version 0.6.0	15/11/18	Assigns clusters (newly defined) in place of inferring historical genotype.
+*	Version 0.6.1	15/11/18	Fixed bug which caused sample names to be inconsistently transferred between processes 
 */
 
 
@@ -46,15 +47,15 @@ process Deduplicate {
 	maxForks 4
 
 	input:
-	set pair_id, file(forward), file(reverse) from read_pairs
+	set pair_id, file("${pair_id}_*_R1_*.fastq.gz"), file("${pair_id}_*_R2_*.fastq.gz") from read_pairs
 
 	output:
 	set pair_id, file("${pair_id}_uniq_R1.fastq"), file("${pair_id}_uniq_R2.fastq") into dedup_read_pairs
 	set pair_id, file("${pair_id}_uniq_R1.fastq") into uniq_reads
 
 	"""
-	gunzip -c ${forward} > ${pair_id}_R1.fastq 
-	gunzip -c ${reverse} > ${pair_id}_R2.fastq
+	gunzip -c ${pair_id}_*_R1_*.fastq.gz > ${pair_id}_R1.fastq 
+	gunzip -c ${pair_id}_*_R2_*.fastq.gz > ${pair_id}_R2.fastq
 	echo '${pair_id}_R1.fastq\n${pair_id}_R2.fastq' > fqin.lst
 	$dependpath/FastUniq/source/fastuniq -i fqin.lst -o ${pair_id}_uniq_R1.fastq -p ${pair_id}_uniq_R2.fastq
 	rm ${pair_id}_R1.fastq
@@ -77,7 +78,7 @@ process Trim {
 	set pair_id, file("${pair_id}_trim_R1.fastq") into trim_reads
 	
 	"""
-	java -jar $dependpath/Trimmomatic-0.38/trimmomatic-0.38.jar PE -threads 4 -phred33 ${pair_id}_uniq_R1.fastq ${pair_id}_uniq_R2.fastq  ${pair_id}_trim_R1.fastq ${pair_id}_fail1.fastq ${pair_id}_trim_R2.fastq ${pair_id}_fail2.fastq ILLUMINACLIP:/home/richard/ReferenceSequences/adapter.fasta:2:30:10 SLIDINGWINDOW:10:20 MINLEN:36
+	java -jar $dependpath/Trimmomatic-0.38/trimmomatic-0.38.jar PE -threads 3 -phred33 ${pair_id}_uniq_R1.fastq ${pair_id}_uniq_R2.fastq  ${pair_id}_trim_R1.fastq ${pair_id}_fail1.fastq ${pair_id}_trim_R2.fastq ${pair_id}_fail2.fastq ILLUMINACLIP:/home/richard/ReferenceSequences/adapter.fasta:2:30:10 SLIDINGWINDOW:10:20 MINLEN:36
 	rm ${pair_id}_fail1.fastq
 	rm ${pair_id}_fail2.fastq
 	"""
@@ -149,10 +150,10 @@ process VCF2Consensus {
 process ReadStats{
 	errorStrategy 'ignore'
 
-	maxForks 4
+	maxForks 2
 
 	input:
-	set pair_id, file(forward), file(reverse) from raw_reads
+	set pair_id, file("${pair_id}_*_R1_*.fastq.gz"), file("${pair_id}_*_R2_*.fastq.gz") from raw_reads
 	set pair_id, file("${pair_id}_uniq_R1.fastq") from uniq_reads
 	set pair_id, file("${pair_id}_trim_R1.fastq") from trim_reads
 	set pair_id, file("${pair_id}.mapped.sorted.bam") from bam4stats
@@ -162,7 +163,7 @@ process ReadStats{
 
 	shell:
 	'''
-	raw_R1=$(zgrep -c "^+\n" !{forward})	
+	raw_R1=$(zgrep -c "^+\n" !{pair_id}_*_R1_*.fastq.gz)	
 	uniq_R1=$(grep -c "^+\n" !{pair_id}_uniq_R1.fastq)
 	trim_R1=$(grep -c "^+\n" !{pair_id}_trim_R1.fastq)
 	num_map=$(samtools view -c !{pair_id}.mapped.sorted.bam)
@@ -205,11 +206,11 @@ process SNPfiltAnnot{
 }
 
 
-/* Genotyping - inference of spoligo and VNTR types from genotype specific SNPs */
-process GenotypingGSS{
+/* Assigns cluster by matching patterns of cluster specific SNPs. Also suggests inferred historical genotype */
+process AssignClusterCSS{
 	errorStrategy 'ignore'
 
-	maxForks 4
+	maxForks 2
 
 	input:
 	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf
