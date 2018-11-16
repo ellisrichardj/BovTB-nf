@@ -32,7 +32,7 @@ else:
     thqualnonsnp=int(sys.argv[10])
     strainVCF=sys.argv[11]
 
-patternsDetailsFile="patterns20131220.csv"
+patternsDetailsFile="CSSnewclusters_181115.csv" #"patterns20131220.csv"
 patternsBritishBTBFile="patternsBritishBTB.csv"
 patternsPinnipediiFile="patternsPinnipedii.csv"
 patternsMic_PinFile="patternsMic_Pin.csv"
@@ -274,7 +274,7 @@ patternsMicrotiDetails=listT(readTable(os.path.join(pathPatterns,patternsMicroti
 patternsBTBDetails=listT(readTable(os.path.join(pathPatterns,patternsBTBFile),","))
 
 
-maxPats=[strainsDetails[0]+["flag","group","gSSTested","matches","mismatches","noCoverage","anomalous"]]
+maxPats=[strainsDetails[0]+["flag","group","CSSTested","matches","mismatches","noCoverage","anomalous"]]
 maxPatsQ=[[[patternsDetails[0][0]]]+[["PredGenotype"],["M-MM-N-A"]]+[[x] for x in patternsDetails[0][1:]],[[patternsDetails[1][0]]]+[[""],[""]]+[[x] for x in patternsDetails[1][1:]],[[patternsDetails[2][0]]]+[[""],[""]]+[[x] for x in patternsDetails[2][1:]]]
 
 outFileName="_stage1.csv"
