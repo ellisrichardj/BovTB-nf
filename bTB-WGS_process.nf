@@ -16,7 +16,8 @@
 *	Version 0.5.2	01/10/18	Mark shorter split hits as secondary in bam file (-M) and change sam flag filter to 3844
 *	Version 0.5.3	15/10/18	Increase min mapQ for mpileup to 60 to ensure unique reads only; add $dependpath variable
 *	Version 0.6.0	15/11/18	Assigns clusters (newly defined) in place of inferring historical genotype.
-*	Version 0.6.1	15/11/18	Fixed bug which caused sample names to be inconsistently transferred between processes 
+*	Version 0.6.1	15/11/18	Fixed bug which caused sample names to be inconsistently transferred between processes
+*	Version 0.6.2	24/11/18	Fixed bug to allow cluster assignment to be collected in a single file
 */
 
 
@@ -217,7 +218,7 @@ process AssignClusterCSS{
 	set pair_id, file("${pair_id}_stats.csv") from stats
 
 	output:
-	set pair_id, file("${pair_id}_stage1.csv") into Genotyping
+	set file("${pair_id}_stage1.csv") into AssignCluster
 	set pair_id, file("${pair_id}.meg") into GSSalign
 
 	"""
@@ -248,10 +249,8 @@ process Spoligotype{
 }*/
 
 /* Combine all data into a single results file */
-Channel
-	.from Genotyping
+AssignCluster
 	.collectFile( name: 'InferredGenotypes.csv', sort: true, storeDir: "$PWD/Results", keepHeader: true )
-	.set { RunStats }
 
 
 
