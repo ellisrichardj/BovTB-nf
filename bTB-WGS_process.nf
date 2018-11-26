@@ -18,6 +18,7 @@
 *	Version 0.6.0	15/11/18	Assigns clusters (newly defined) in place of inferring historical genotype.
 *	Version 0.6.1	15/11/18	Fixed bug which caused sample names to be inconsistently transferred between processes
 *	Version 0.6.2	24/11/18	Fixed bug to allow cluster assignment to be collected in a single file
+*	Version 0.6.3	26/11/18	Removed 'set' in output declaration as it caused nextflow warning
 */
 
 
@@ -218,7 +219,7 @@ process AssignClusterCSS{
 	set pair_id, file("${pair_id}_stats.csv") from stats
 
 	output:
-	set file("${pair_id}_stage1.csv") into AssignCluster
+	file("${pair_id}_stage1.csv") into AssignCluster
 	set pair_id, file("${pair_id}.meg") into GSSalign
 
 	"""
