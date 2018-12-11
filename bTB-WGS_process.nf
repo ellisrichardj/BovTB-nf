@@ -19,6 +19,8 @@
 *	Version 0.6.1	15/11/18	Fixed bug which caused sample names to be inconsistently transferred between processes
 *	Version 0.6.2	24/11/18	Fixed bug to allow cluster assignment to be collected in a single file
 *	Version 0.6.3	26/11/18	Removed 'set' in output declaration as it caused nextflow warning
+*	Version 0.7.0	26/11/18	Add process to output phylogenetic tree
+*	Version 0.7.1	11/12/18	Used join to ensure inputs are properly linked
 */
 
 
@@ -38,7 +40,7 @@ dependpath = file(params.dependPath)
 Channel
     .fromFilePairs( params.reads, flat: true )
     .ifEmpty { error "Cannot find any reads matching: ${params.reads}" }
-	.set { read_pairs} 
+	.set { read_pairs } 
 	read_pairs.into { read_pairs; raw_reads }
 
 
@@ -147,6 +149,20 @@ process VCF2Consensus {
 	"""
 }
 
+raw_reads
+	.join(uniq_reads)
+	.set { raw_uniq }
+//	.println()
+
+trim_reads
+	.join(bam4stats)
+	.set { trim_bam }
+//	.println()
+
+raw_uniq
+	.join(trim_bam)
+	.set { input4stats }
+//	.println()
 
 /* Mapping Statistics*/
 process ReadStats{
@@ -155,10 +171,14 @@ process ReadStats{
 	maxForks 2
 
 	input:
-	set pair_id, file("${pair_id}_*_R1_*.fastq.gz"), file("${pair_id}_*_R2_*.fastq.gz") from raw_reads
-	set pair_id, file("${pair_id}_uniq_R1.fastq") from uniq_reads
-	set pair_id, file("${pair_id}_trim_R1.fastq") from trim_reads
-	set pair_id, file("${pair_id}.mapped.sorted.bam") from bam4stats
+// need to create a channel combining the input values as needed to trigger the process 
+
+//	set pair_id, file("${pair_id}_*_R1_*.fastq.gz"), file("${pair_id}_*_R2_*.fastq.gz") from raw_reads
+//	set pair_id, file("${pair_id}_uniq_R1.fastq") from uniq_reads
+//	set pair_id, file("${pair_id}_trim_R1.fastq") from trim_reads
+//	set pair_id, file("${pair_id}.mapped.sorted.bam") from bam4stats
+
+	set pair_id, file("${pair_id}_*_R1_*.fastq.gz"), file("${pair_id}_*_R2_*.fastq.gz"), file("${pair_id}_uniq_R1.fastq"), file("${pair_id}_trim_R1.fastq"), file("${pair_id}.mapped.sorted.bam") from input4stats
 
 	output:
 	set pair_id, file("${pair_id}_stats.csv") into stats
@@ -207,6 +227,9 @@ process SNPfiltAnnot{
 	"""
 }
 
+vcf
+	.join(stats)
+	.set { input4Assign }
 
 /* Assigns cluster by matching patterns of cluster specific SNPs. Also suggests inferred historical genotype */
 process AssignClusterCSS{
@@ -215,12 +238,16 @@ process AssignClusterCSS{
 	maxForks 2
 
 	input:
-	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf
-	set pair_id, file("${pair_id}_stats.csv") from stats
+// need to create a channel combining the input values as needed to trigger the process 
+
+//	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf
+//	set pair_id, file("${pair_id}_stats.csv") from stats
+
+	set pair_id, file("${pair_id}.pileup.vcf.gz"), file("${pair_id}_stats.csv") from input4Assign
 
 	output:
 	file("${pair_id}_stage1.csv") into AssignCluster
-	set pair_id, file("${pair_id}.meg") into GSSalign
+	file("${pair_id}.meg") into CSSalign
 
 	"""
 	gunzip -c ${pair_id}.pileup.vcf.gz > ${pair_id}.pileup.vcf
@@ -249,10 +276,32 @@ process Spoligotype{
 
 }*/
 
-/* Combine all data into a single results file */
+/* Combine all cluster assignment data into a single results file */
 AssignCluster
 	.collectFile( name: 'InferredGenotypes.csv', sort: true, storeDir: "$PWD/Results", keepHeader: true )
 
+/* Combine all alignments into a single results file */
+CSSalign
+	.collectFile( name: 'AlignedCSS.meg', sort: true, storeDir: "$PWD/Results", keepHeader: true )
+	.set { Alignment }
+
+/* Generate phyogenetic tree from alignments 
+process DrawTree{
+
+	errorStrategy 'ignore'
+
+	maxForks 2
+
+	input:
+	file("AlignedCSS.meg") from Alignment
+
+	output:
+	file("Tree.nwk") into Tree
+
+	"""
+	megacc -a /home/richard/infer_MP_nucleotide.mao -d AlignedCSS.meg
+	"""
+}*/
 
 
 workflow.onComplete {
