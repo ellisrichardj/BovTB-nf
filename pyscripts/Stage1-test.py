@@ -9,7 +9,7 @@ if len(args)<2:
     pathTBRuns=(os.path.dirname(os.getcwd()))
     instats="*.csv"
     pathPatterns="/home/richard/MyScripts/BovTB-nf/references/Stage1_patterns"
-    refName="AF2122.fna"
+    refName="Mycbovis-2122-97_LT708304.fas"
     TBRun ="test"
     ncpus=1
     qth=8
@@ -32,12 +32,12 @@ else:
     thqualnonsnp=int(sys.argv[10])
     strainVCF=sys.argv[11]
 
-patternsDetailsFile="CSSnewclusters_181115.csv" #"patterns20131220.csv"
-patternsBritishBTBFile="patternsBritishBTB.csv"
-patternsPinnipediiFile="patternsPinnipedii.csv"
-patternsMic_PinFile="patternsMic_Pin.csv"
-patternsMicrotiFile="patternsMicroti.csv"
-patternsBTBFile="patternsBTB.csv"
+patternsDetailsFile="CSSnewclusters_LT708304_181217.csv" #"CSSnewclusters_181115.csv" #"patterns20131220.csv"
+patternsBritishBTBFile="patternsBritishBTB_LT708304.csv"
+patternsPinnipediiFile="patternsPinnipedii_LT708304.csv"
+patternsMic_PinFile="patternsMic_Pin_LT708304.csv"
+patternsMicrotiFile="patternsMicroti_LT708304.csv"
+patternsBTBFile="patternsBTB_LT708304.csv"
 
 
 # reads a csv file
@@ -217,6 +217,9 @@ def writeGenotypeMatrixToMega(snpsMatrixT,patternMatrix,megaTitle,patho):
     fileOut=open(os.path.join(patho,megaTitle+".meg"),"wb")
     fileOut.write("\n".join(megaMatrix))
     print "file "+os.path.join(patho,megaTitle+".meg")+" saved."
+
+#Output standard fasta instead of mega format (bed - vcf - fasta?)
+#def writeSNPfasta(
 
 def getBestMatchPattern(patternsDetails,strainGSSInfo):
     print "matching positions:"
