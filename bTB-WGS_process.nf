@@ -21,6 +21,7 @@
 *	Version 0.6.3	26/11/18	Removed 'set' in output declaration as it caused nextflow warning
 *	Version 0.7.0	26/11/18	Add process to output phylogenetic tree
 *	Version 0.7.1	11/12/18	Used join to ensure inputs are properly linked
+*	Version 0.7.2	18/12/18	Changed samtools filter to remove unmapped reads and reads that aligned more than once
 */
 
 
@@ -103,7 +104,7 @@ process Map2Ref {
 
 	"""
 	$dependpath/bwa/bwa mem -T10 -M -t2 $ref  ${pair_id}_trim_R1.fastq ${pair_id}_trim_R2.fastq |
-	 samtools view -@2 -ShuF 3844 - |
+	 samtools view -@2 -ShuF 2308 - |
 	 samtools sort -@2 - -o ${pair_id}.mapped.sorted.bam
 	"""
 }
@@ -149,20 +150,19 @@ process VCF2Consensus {
 	"""
 }
 
+//	Combine data for generating per sample statistics
+
 raw_reads
 	.join(uniq_reads)
 	.set { raw_uniq }
-//	.println()
 
 trim_reads
 	.join(bam4stats)
 	.set { trim_bam }
-//	.println()
 
 raw_uniq
 	.join(trim_bam)
 	.set { input4stats }
-//	.println()
 
 /* Mapping Statistics*/
 process ReadStats{
@@ -171,13 +171,6 @@ process ReadStats{
 	maxForks 2
 
 	input:
-// need to create a channel combining the input values as needed to trigger the process 
-
-//	set pair_id, file("${pair_id}_*_R1_*.fastq.gz"), file("${pair_id}_*_R2_*.fastq.gz") from raw_reads
-//	set pair_id, file("${pair_id}_uniq_R1.fastq") from uniq_reads
-//	set pair_id, file("${pair_id}_trim_R1.fastq") from trim_reads
-//	set pair_id, file("${pair_id}.mapped.sorted.bam") from bam4stats
-
 	set pair_id, file("${pair_id}_*_R1_*.fastq.gz"), file("${pair_id}_*_R2_*.fastq.gz"), file("${pair_id}_uniq_R1.fastq"), file("${pair_id}_trim_R1.fastq"), file("${pair_id}.mapped.sorted.bam") from input4stats
 
 	output:
@@ -227,6 +220,8 @@ process SNPfiltAnnot{
 	"""
 }
 
+//	Combine data for assign cluster for each sample
+
 vcf
 	.join(stats)
 	.set { input4Assign }
@@ -238,11 +233,6 @@ process AssignClusterCSS{
 	maxForks 2
 
 	input:
-// need to create a channel combining the input values as needed to trigger the process 
-
-//	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf
-//	set pair_id, file("${pair_id}_stats.csv") from stats
-
 	set pair_id, file("${pair_id}.pileup.vcf.gz"), file("${pair_id}_stats.csv") from input4Assign
 
 	output:
