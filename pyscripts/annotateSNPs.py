@@ -148,7 +148,7 @@ for gbk_record in SeqIO.parse(open(gbkFile,"r"), "genbank"):
 newtab=[]
 
 for snp in snps:
-    fea=[feature for feature in gbk_record.features if snp[ppos]>=feature.location._start.position and snp[ppos]<=feature.location._end.position and feature.type=='CDS']
+    fea=[feature for feature in gbk_record.features if snp[ppos]>=feature.location.start.position and snp[ppos]<=feature.location.end.position and feature.type=='CDS']
     if len(fea)>0:    
         fea=fea[0]    
         gene="none"
