@@ -22,6 +22,7 @@
 *	Version 0.7.0	26/11/18	Add process to output phylogenetic tree
 *	Version 0.7.1	11/12/18	Used join to ensure inputs are properly linked
 *	Version 0.7.2	18/12/18	Changed samtools filter to remove unmapped reads and reads that aligned more than once
+*	Version 0.7.3	22/01/19	Changed link to adapters file for trimming
 */
 
 
@@ -32,6 +33,7 @@ ref = file(params.ref)
 refgbk = file(params.refgbk)
 stage1pat = file(params.stage1pat)
 stage2pat = file(params.stage2pat)
+adapters = file(params.adapters)
 
 pypath = file(params.pypath)
 dependpath = file(params.dependPath)
@@ -83,7 +85,7 @@ process Trim {
 	set pair_id, file("${pair_id}_trim_R1.fastq") into trim_reads
 	
 	"""
-	java -jar $dependpath/Trimmomatic-0.38/trimmomatic-0.38.jar PE -threads 3 -phred33 ${pair_id}_uniq_R1.fastq ${pair_id}_uniq_R2.fastq  ${pair_id}_trim_R1.fastq ${pair_id}_fail1.fastq ${pair_id}_trim_R2.fastq ${pair_id}_fail2.fastq ILLUMINACLIP:/home/richard/ReferenceSequences/adapter.fasta:2:30:10 SLIDINGWINDOW:10:20 MINLEN:36
+	java -jar $dependpath/Trimmomatic-0.38/trimmomatic-0.38.jar PE -threads 3 -phred33 ${pair_id}_uniq_R1.fastq ${pair_id}_uniq_R2.fastq  ${pair_id}_trim_R1.fastq ${pair_id}_fail1.fastq ${pair_id}_trim_R2.fastq ${pair_id}_fail2.fastq ILLUMINACLIP:$adapters:2:30:10 SLIDINGWINDOW:10:20 MINLEN:36
 	rm ${pair_id}_fail1.fastq
 	rm ${pair_id}_fail2.fastq
 	"""
@@ -241,7 +243,7 @@ process AssignClusterCSS{
 
 	"""
 	gunzip -c ${pair_id}.pileup.vcf.gz > ${pair_id}.pileup.vcf
-	python $pypath/Stage1-test.py ${pair_id}_stats.csv ${stage1pat} AF2122.fna test 1 ${min_mean_cov} ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} ${min_qual_nonsnp} ${pair_id}.pileup.vcf
+	python $pypath/Stage1-test.py ${pair_id}_stats.csv ${stage1pat} $ref test 1 ${min_mean_cov} ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} ${min_qual_nonsnp} ${pair_id}.pileup.vcf
 	mv test/Stage1/test_stage1.meg ${pair_id}.meg 
 	mv _stage1.csv ${pair_id}_stage1.csv
 	"""
