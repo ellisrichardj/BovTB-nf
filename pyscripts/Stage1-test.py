@@ -98,7 +98,7 @@ def findGenotypeOneSample(strainsDetailsTittle,strainDetails,pathTBRuns,patterns
     pfileName=strainsDetailsTittle.index('Sample')
     name=[strainDetails[pfileName]]
     meanCov=float(strainDetails[pmeanCov])
-    print "Procesing "+strainDetails[pfileName]
+#    print "Procesing "+strainDetails[pfileName]
  
     strainStatsFileName=strainDetails[pfileName]+".pileup.vcf"
     
@@ -108,6 +108,8 @@ def findGenotypeOneSample(strainsDetailsTittle,strainDetails,pathTBRuns,patterns
     posToExtractMic_Pin=map(int,patternsMic_PinDetails[0][1:])
     posToExtractMicroti=map(int,patternsMicrotiDetails[0][1:])
     posToExtractPinnipedii=map(int,patternsPinnipediiDetails[0][1:])
+
+# change flags in this section
     [strainGSSInfo,strainGSSBritishBTBInfo,strainGSSBTBInfo,strainGSSMic_PinInfo,strainGSSMicrotiInfo,strainGSSPinnipediiInfo]=getSnpsStatsStrain(strainStatsFileName,[posToExtract,posToExtractBritishBTB,posToExtractBTB,posToExtractMic_Pin,posToExtractMicroti,posToExtractPinnipedii],pathAux,thMinGoodCov,thCovProp,thqualsnp,thqualnonsnp)  
     if meanCov >=qth:
         BTB=getBestMatchPattern(patternsBTBDetails,strainGSSBTBInfo)[0]
@@ -262,10 +264,11 @@ pfileName=strainsInfo[0].index('Sample')
 pmeanCov=strainsInfo[0].index('MeanCov')
 ppermap=strainsInfo[0].index('%Mapped')
 totalReads=strainsInfo[0].index('NumRawReads')
+outcome=strainsInfo[0].index('Outcome')
 strainsInfo=listT(strainsInfo)
-strainsDetails=listT([strainsInfo[pfileName][1:],strainsInfo[pmeanCov][1:],strainsInfo[totalReads][1:],strainsInfo[ppermap][1:]])
+strainsDetails=listT([strainsInfo[pfileName][1:],strainsInfo[pmeanCov][1:],strainsInfo[totalReads][1:],strainsInfo[ppermap][1:],strainsInfo[outcome][1:]])
 
-strainsDetails=[['Sample','MeanCov','NumRawReads','pcMapped',]]+strainsDetails
+strainsDetails=[['Sample','MeanCov','NumRawReads','pcMapped','Outcome',]]+strainsDetails
 print "Processing "+ str(len(strainsDetails))+" samples"
 
 
