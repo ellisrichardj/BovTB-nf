@@ -23,6 +23,8 @@
 *	Version 0.7.1	11/12/18	Used join to ensure inputs are properly linked
 *	Version 0.7.2	18/12/18	Changed samtools filter to remove unmapped reads and reads that aligned more than once
 *	Version 0.7.3	22/01/19	Changed link to adapters file for trimming
+*	Version 0.7.4	22/02/19	Changed calculations of mapping stats
+*	Version 0.7.5	08/03/19	Further correction of mapping stats and addition of success flags
 */
 
 
@@ -144,6 +146,8 @@ process VCF2Consensus {
 	output:
 	set pair_id, file("${pair_id}_consensus.fas"), file("${pair_id}.fq"), file("${pair_id}.fasta") into consensus
 
+// need to add normalization and filtering before consensus calling
+
 	"""
 	bcftools index ${pair_id}.pileup.vcf.gz
 	bcftools view -O v ${pair_id}.pileup.vcf.gz | perl $pypath/vcfutils.pl vcf2fq - > ${pair_id}.fq
@@ -180,9 +184,13 @@ process ReadStats{
 
 	shell:
 	'''
-	raw_R1=$(zgrep -c "^+\n" !{pair_id}_*_R1_*.fastq.gz)	
-	uniq_R1=$(grep -c "^+\n" !{pair_id}_uniq_R1.fastq)
-	trim_R1=$(grep -c "^+\n" !{pair_id}_trim_R1.fastq)
+	raw_R1=$(zgrep -c "^+$" !{pair_id}_*_R1_*.fastq.gz)
+	rm !{pair_id}_*_R1_*.fastq.gz
+	rm !{pair_id}_*_R2_*.fastq.gz
+	uniq_R1=$(grep -c "^+$" !{pair_id}_uniq_R1.fastq)
+	rm !{pair_id}_uniq_R1.fastq
+	trim_R1=$(grep -c "^+$" !{pair_id}_trim_R1.fastq)
+	rm !{pair_id}_trim_R1.fastq
 	num_map=$(samtools view -c !{pair_id}.mapped.sorted.bam)
 	avg_depth=$(samtools depth  !{pair_id}.mapped.sorted.bam  |  awk '{sum+=$3} END { print sum/NR}')
 
@@ -191,10 +199,19 @@ process ReadStats{
 	num_trim=$(($trim_R1*2))
 	pc_aft_dedup=$(echo "scale=2; ($num_uniq*100/$num_raw)" |bc)
 	pc_aft_trim=$(echo "scale=2; ($num_trim*100/$num_raw)" |bc)
-	pc_mapped=$(echo "scale=2; ($num_map*100/$num_raw)" |bc)
+	pc_mapped=$(echo "scale=2; ($num_map*100/$num_trim)" |bc)
 
-	echo "Sample,NumRawReads,NumReadsDedup,%afterDedup,NumReadsTrim,%afterTrim,NumReadsMapped,%Mapped,MeanCov" > !{pair_id}_stats.csv
-	echo "!{pair_id},"$num_raw","$num_uniq","$pc_aft_dedup","$num_trim","$pc_aft_trim","$num_map","$pc_mapped","$avg_depth"" >> !{pair_id}_stats.csv
+	mindepth=10
+	minpc=60
+	minreads=600000
+	
+	if [ ${avg_depth%%.*} -ge $mindepth ]; then flag="Pass"
+		elif [ ${avg_depth%%.*} -lt $mindepth ] && [ $pc_mapped -lt $minpc ] && [ num_trim -gt $minreads ]; then flag="Comtaminated"
+		elif [ ${avg_depth%%.*} -lt $mindepth ] && [ num_trim -lt $minreads ] ; then flag="Insufficient Data"
+	fi
+ 
+	echo "Sample,NumRawReads,NumDedupReads,%afterDedup,NumTrimReads,%afterTrim,NumMappedReads,%Mapped,MeanCov,Outcome" > !{pair_id}_stats.csv
+	echo "!{pair_id},"$num_raw","$num_uniq","$pc_aft_dedup","$num_trim","$pc_aft_trim","$num_map","$pc_mapped","$avg_depth","$flag"" >> !{pair_id}_stats.csv
 	'''
 }
 
@@ -228,7 +245,7 @@ vcf
 	.join(stats)
 	.set { input4Assign }
 
-/* Assigns cluster by matching patterns of cluster specific SNPs. Also suggests inferred historical genotype */
+/* Assigns cluster by matching patterns of cluster specific SNPs */
 process AssignClusterCSS{
 	errorStrategy 'ignore'
 
