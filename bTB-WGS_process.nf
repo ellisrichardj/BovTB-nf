@@ -28,7 +28,6 @@
 *	Version 0.8.0	12/03/19	Add kraken to ID samples that fail cluster assignment
 */
 
-
 params.reads = "$PWD/*_{S*_R1,S*_R2}*.fastq.gz"
 params.outdir = "$PWD"
 
