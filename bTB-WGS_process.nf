@@ -25,6 +25,7 @@
 *	Version 0.7.3	22/01/19	Changed link to adapters file for trimming
 *	Version 0.7.4	22/02/19	Changed calculations of mapping stats
 *	Version 0.7.5	08/03/19	Further correction of mapping stats and addition of success flags
+*	Version 0.8.0	12/03/19	Add kraken to ID samples that fail cluster assignment
 */
 
 
@@ -181,6 +182,7 @@ process ReadStats{
 
 	output:
 	set pair_id, file("${pair_id}_stats.csv") into stats
+	set pair_id, file('outcome.txt') into Outcome
 
 	shell:
 	'''
@@ -205,16 +207,17 @@ process ReadStats{
 	minpc=60
 	minreads=600000
 	
-	if [ ${avg_depth%%.*} -ge $mindepth ]; then flag="Pass"
-		elif [ ${avg_depth%%.*} -lt $mindepth ] && [ $pc_mapped -lt $minpc ] && [ num_trim -gt $minreads ]; then flag="Comtaminated"
-		elif [ ${avg_depth%%.*} -lt $mindepth ] && [ num_trim -lt $minreads ] ; then flag="Insufficient Data"
+	if [ ${avg_depth%%.*} -ge $mindepth ] && [ ${pc_mapped%%.*} -gt $minpc ]; then flag="Pass"
+		elif [ ${avg_depth%%.*} -lt $mindepth ] && [ ${pc_mapped%%.*} -lt $minpc ] && [ $num_trim -gt $minreads ]; then flag="Comtaminated"
+		elif [ ${pc_mapped%%.*} -lt $minpc ]; then flag="NonBovMycobact"
+		elif [ ${avg_depth%%.*} -lt $mindepth ] && [ $num_trim -lt $minreads ]; then flag="InsufficientData"
 	fi
  
 	echo "Sample,NumRawReads,NumDedupReads,%afterDedup,NumTrimReads,%afterTrim,NumMappedReads,%Mapped,MeanCov,Outcome" > !{pair_id}_stats.csv
 	echo "!{pair_id},"$num_raw","$num_uniq","$pc_aft_dedup","$num_trim","$pc_aft_trim","$num_map","$pc_mapped","$avg_depth","$flag"" >> !{pair_id}_stats.csv
+	echo "$flag" > outcome.txt
 	'''
 }
-
 
 /* SNP filtering and annotation */
 process SNPfiltAnnot{
@@ -266,24 +269,34 @@ process AssignClusterCSS{
 	"""
 }
 
-/* in-silico Spoligotyping 
-process Spoligotype{
+Outcome
+	.join(trim_read_pairs2)
+	.set { IDdata }
+
+
+/* Identify any non-M.bovis samples using kraken */
+process IDnonbovis{
 	errorStrategy 'ignore'
 
-	maxForks 4
+	publishDir '$PWD/Results/NonBovID'
+
+	maxForks 1
 
 	input:
-	set pair_id, file("${pair_id}_trim_R1.fastq"), file("${pair_id}_trim_R2.fastq") from trim_read_pairs2
+	set pair_id, file('outcome.txt'), file("${pair_id}_trim_R1.fastq"), file("${pair_id}_trim_R2.fastq") from IDdata
 
 	output:
-	set pair_id, file("${pair_id}_spoligotype.csv") into spoligo
+	set pair_id, file("${pair_id}_kraken.tab") optional true into IDnonbovis
 
-	""" 
-	python $pypath/Stage2-test.py ${pair_id}_trim_R1.fastq ${pair_id}_trim_R2.fastq test $stage2pat test 1 ${min_mean_cov} false 1.5 1
-	""" 
-
-
-}*/
+	"""
+	outcome=\$(cat outcome.txt)
+	if [ \$outcome != "Pass" ]; then
+	kraken --threads 2 --preload --quick --paired --fastq-input ${pair_id}_trim_R1.fastq ${pair_id}_trim_R2.fastq | kraken-report > ${pair_id}_kraken.tab
+	else
+	echo "ID not required"
+	fi
+	"""
+}
 
 /* Combine all cluster assignment data into a single results file */
 AssignCluster
