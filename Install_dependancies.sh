@@ -42,6 +42,18 @@ cd ..
 
 wget https://github.com/lh3/samtools/blob/master/bcftools/vcfutils.pl
 
+# kraken2 and associated database
+
+wget http://github.com/DerrickWood/kraken2/archive/v2.0.7-beta.tar.gz && tar xzf v2.0.7-beta.tar.gz && rm -f v2.0.7-beta.tar.gz
+cd kraken2-2.0.7-beta
+./install_kraken2.sh ../Kraken2
+cd ..
+mkdir Kraken2/db
+cd Kraken2/db
+wget https://ccb.jhu.edu/software/kraken2/dl/minikraken2_v1_8GB.tgz && tar xvf minikraken2_v1_8GB.tgz
+cd ../..
+export KRAKEN2_DEFAULT_DB="$PWD/Kraken2/db/:"
+
 # get some test data
 
 #mkdir Data
@@ -50,7 +62,6 @@ wget https://github.com/lh3/samtools/blob/master/bcftools/vcfutils.pl
 #mv ftp.sra.ebi.ac.uk/vol1/fastq/ERR841//*_1.fastq.gz $PWD
 #mv ftp.sra.ebi.ac.uk/vol1/fastq/ERR841//*_2.fastq.gz $PWD
 #rm -r ftp.sra.ebi.ac.uk/
-
 
 # anything else??
 
