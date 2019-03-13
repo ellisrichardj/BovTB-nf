@@ -26,6 +26,7 @@
 *	Version 0.7.4	22/02/19	Changed calculations of mapping stats
 *	Version 0.7.5	08/03/19	Further correction of mapping stats and addition of success flags
 *	Version 0.8.0	12/03/19	Add kraken to ID samples that fail cluster assignment
+*	Version 0.8.1	13/03/19	Update to kraken2
 */
 
 params.reads = "$PWD/*_{S*_R1,S*_R2}*.fastq.gz"
@@ -268,10 +269,11 @@ process AssignClusterCSS{
 	"""
 }
 
+// Collect data to ID any non-M.bovis samples
+
 Outcome
 	.join(trim_read_pairs2)
 	.set { IDdata }
-
 
 /* Identify any non-M.bovis samples using kraken */
 process IDnonbovis{
@@ -290,7 +292,7 @@ process IDnonbovis{
 	"""
 	outcome=\$(cat outcome.txt)
 	if [ \$outcome != "Pass" ]; then
-	kraken --threads 2 --preload --quick --paired --fastq-input ${pair_id}_trim_R1.fastq ${pair_id}_trim_R2.fastq | kraken-report > ${pair_id}_kraken.tab
+	$dependpath/Kraken2/kraken2 --threads 2 --quick --paired --report ${pair_id}_kraken2.tab --fastq-input ${pair_id}_trim_R1.fastq  ${pair_id}_trim_R2.fastq 
 	else
 	echo "ID not required"
 	fi
