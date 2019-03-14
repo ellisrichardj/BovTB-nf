@@ -27,6 +27,7 @@
 *	Version 0.7.5	08/03/19	Further correction of mapping stats and addition of success flags
 *	Version 0.8.0	12/03/19	Add kraken to ID samples that fail cluster assignment
 *	Version 0.8.1	13/03/19	Update to kraken2
+*	Version 0.8.2	14/03/19	Define loction of kraken2 database as a nextflow parameter
 */
 
 params.reads = "$PWD/*_{S*_R1,S*_R2}*.fastq.gz"
@@ -292,7 +293,7 @@ process IDnonbovis{
 	"""
 	outcome=\$(cat outcome.txt)
 	if [ \$outcome != "Pass" ]; then
-	$dependpath/Kraken2/kraken2 --threads 2 --quick --paired --report ${pair_id}_kraken2.tab --fastq-input ${pair_id}_trim_R1.fastq  ${pair_id}_trim_R2.fastq 
+	$dependpath/Kraken2/kraken2 --threads 2 --quick --db $kraken2db --paired --output - --report ${pair_id}_kraken2.tab --fastq-input ${pair_id}_trim_R1.fastq  ${pair_id}_trim_R2.fastq 
 	else
 	echo "ID not required"
 	fi

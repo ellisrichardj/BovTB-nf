@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# This script will fetch and install the dependancies required for the BovTB-nf process.
+# This script will fetch and install the dependancies required for the BovTB-nf pipeline.
 # The dependancies are generally standard bioinformatics tools
 # There are some standard prerequites for a vanilla linux install such as make, make-guile, gcc, zlib-dev, zlib1g-dev,
 # libncurses5-dev, libbz2-dev, liblzma-dev, python (not python3), python-numpy, python-pip
@@ -50,9 +50,8 @@ cd kraken2-2.0.7-beta
 cd ..
 mkdir Kraken2/db
 cd Kraken2/db
-wget https://ccb.jhu.edu/software/kraken2/dl/minikraken2_v1_8GB.tgz && tar xvf minikraken2_v1_8GB.tgz
+wget https://ccb.jhu.edu/software/kraken2/dl/minikraken2_v1_8GB.tgz && tar xvf minikraken2_v1_8GB.tgz && rm -f minikraken2_v1_8GB.tgz
 cd ../..
-export KRAKEN2_DEFAULT_DB="$PWD/Kraken2/db/:"
 
 # get some test data
 
@@ -70,6 +69,7 @@ export KRAKEN2_DEFAULT_DB="$PWD/Kraken2/db/:"
 # Add locations to nextflow.config
 
 echo "params.dependPath = "\"$PWD"\"" >> BovTB-nf/nextflow.config
+echo "params.kraken2db = "\"$PWD"/Kraken2/db\"" >> BovTB-nf/nextflow.config
 
 echo "Dependancies installed sucessfully!"
 
