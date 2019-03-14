@@ -43,7 +43,7 @@ adapters = file(params.adapters)
 
 pypath = file(params.pypath)
 dependpath = file(params.dependPath)
-kraken2db = file(params.karken2db)
+kraken2db = file(params.kraken2db)
 lowmem = file(params.lowmem)
 
 /*	Collect pairs of fastq files and infer sample names */
