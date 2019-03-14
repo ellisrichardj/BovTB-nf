@@ -28,10 +28,12 @@
 *	Version 0.8.0	12/03/19	Add kraken to ID samples that fail cluster assignment
 *	Version 0.8.1	13/03/19	Update to kraken2
 *	Version 0.8.2	14/03/19	Define loction of kraken2 database as a nextflow parameter
+*	Version 0.8.3	14/03/19	Add option to reduce memory use by kraken2 if required
 */
 
 params.reads = "$PWD/*_{S*_R1,S*_R2}*.fastq.gz"
 params.outdir = "$PWD"
+params.lowmem = ""
 
 ref = file(params.ref)
 refgbk = file(params.refgbk)
@@ -41,7 +43,8 @@ adapters = file(params.adapters)
 
 pypath = file(params.pypath)
 dependpath = file(params.dependPath)
-
+kraken2db = file(params.karken2db)
+lowmem = file(params.lowmem)
 
 /*	Collect pairs of fastq files and infer sample names */
 Channel
@@ -280,7 +283,7 @@ Outcome
 process IDnonbovis{
 	errorStrategy 'ignore'
 
-	publishDir '$PWD/Results/NonBovID'
+	publishDir "$PWD/Results/NonBovID"
 
 	maxForks 1
 
@@ -293,7 +296,7 @@ process IDnonbovis{
 	"""
 	outcome=\$(cat outcome.txt)
 	if [ \$outcome != "Pass" ]; then
-	$dependpath/Kraken2/kraken2 --threads 2 --quick --db $kraken2db --paired --output - --report ${pair_id}_kraken2.tab --fastq-input ${pair_id}_trim_R1.fastq  ${pair_id}_trim_R2.fastq 
+	$dependpath/Kraken2/kraken2 --threads 2 --quick $lowmem --db $kraken2db --paired --output - --report ${pair_id}_kraken2.tab --fastq-input ${pair_id}_trim_R1.fastq  ${pair_id}_trim_R2.fastq 
 	else
 	echo "ID not required"
 	fi

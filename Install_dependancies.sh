@@ -8,6 +8,8 @@ set -e
 # e.g. on Ubuntu: sudo apt install make make-guile gcc zlib-dev zlib1g-dev libncurses5-dev libbz2-dev liblzma-dev python python-numpy, python-pip
 # Followed by pip install biopython
 
+# Make diractory for dependancy install and cd to that directory before running this script
+
 
 # FastUniq
 
