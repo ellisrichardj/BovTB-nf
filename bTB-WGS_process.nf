@@ -31,6 +31,7 @@
 *	Version 0.8.3	14/03/19	Add option to reduce memory use by kraken2 if required
 */
 
+params.lowmem = ""
 params.reads = "$PWD/*_{S*_R1,S*_R2}*.fastq.gz"
 params.outdir = "$PWD"
 lowmem = Channel.value("${params.lowmem}")
