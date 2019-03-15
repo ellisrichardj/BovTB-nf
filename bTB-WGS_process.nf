@@ -29,6 +29,7 @@
 *	Version 0.8.1	13/03/19	Update to kraken2
 *	Version 0.8.2	14/03/19	Define loction of kraken2 database as a nextflow parameter
 *	Version 0.8.3	14/03/19	Add option to reduce memory use by kraken2 if required
+*	Verison 0.8.4	15/03/19	Correct output location of kraken2 tables
 */
 
 params.lowmem = ""
@@ -283,7 +284,7 @@ Outcome
 process IDnonbovis{
 	errorStrategy 'ignore'
 
-	publishDir "$PWD/Results/NonBovID"
+	publishDir "$params.outdir/Results/NonBovID", mode: 'copy'
 
 	maxForks 1
 
@@ -336,5 +337,5 @@ workflow.onComplete {
 		log.info "Completed sucessfully:	$workflow.success"		
 		log.info "Nextflow Version:	$workflow.nextflow.version"
 		log.info "Duration:		$workflow.duration"
-		log.info "Output Directory:	$params.outdir"
+		log.info "Output Directory:	$params.outdir/Results"
 }
