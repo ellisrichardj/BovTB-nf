@@ -284,7 +284,7 @@ Outcome
 process IDnonbovis{
 	errorStrategy 'ignore'
 
-	publishDir "$params.outdir/Results/NonBovID", mode: 'copy'
+	publishDir "$params.outdir/Results/NonBovID", mode: 'copy', pattern: '*.tab'
 
 	maxForks 1
 
@@ -293,7 +293,7 @@ process IDnonbovis{
 	val lowmem from lowmem
 
 	output:
-	set pair_id, file("${pair_id}_kraken.tab") optional true into IDnonbovis
+	set pair_id, file("${pair_id}_kraken2.tab") optional true into IDnonbovis
 
 	"""
 	outcome=\$(cat outcome.txt)
