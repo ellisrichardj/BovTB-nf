@@ -308,7 +308,7 @@ process IDnonbovis{
 
 /* Combine all cluster assignment data into a single results file */
 AssignCluster
-	.collectFile( name: 'InferredGenotypes.csv', sort: true, storeDir: "$PWD/Results", keepHeader: true )
+	.collectFile( name: 'AssignedWGSCluster.csv', sort: true, storeDir: "$PWD/Results", keepHeader: true )
 
 /* Combine all alignments into a single results file */
 CSSalign
