@@ -10,6 +10,7 @@ It has been built to run using nextflow, using standard bioinformatic tools for 
 -	bwa
 -	samtools and bcftools
 -	vcfutils.pl
+-	Kraken2 (and database)
 
 ## Installation
 
