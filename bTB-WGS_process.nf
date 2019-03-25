@@ -30,6 +30,7 @@
 *	Version 0.8.2	14/03/19	Define loction of kraken2 database as a nextflow parameter
 *	Version 0.8.3	14/03/19	Add option to reduce memory use by kraken2 if required
 *	Verison 0.8.4	15/03/19	Correct output location of kraken2 tables
+*	Version 0.8.5	25/03/19	Output bam, vcf and consensus to Results directory
 */
 
 params.lowmem = ""
@@ -103,6 +104,8 @@ process Trim {
 process Map2Ref {
 	errorStrategy 'ignore'
 
+	publishDir "$params.outdir/Results/bam", mode: 'copy', pattern: '*.sorted.bam'
+
 	maxForks 1
 
 	input:
@@ -122,6 +125,8 @@ process Map2Ref {
 /* Variant calling */
 process VarCall {
 	errorStrategy 'ignore'
+
+	publishDir "$params.outdir/Results/vcf", mode: 'copy', pattern: '*.vcf.gz'
 
 	maxForks 4
 
@@ -143,6 +148,8 @@ process VarCall {
 /* Consensus calling */
 process VCF2Consensus {
 	errorStrategy 'ignore'
+
+	publishDir "$params.outdir/Results/consensus", mode: 'copy', pattern: '*_concensus.fas'
 
 	maxForks 2
 
@@ -215,7 +222,7 @@ process ReadStats{
 	if [ ${avg_depth%%.*} -ge $mindepth ] && [ ${pc_mapped%%.*} -gt $minpc ]; then flag="Pass"
 		elif [ ${avg_depth%%.*} -lt $mindepth ] && [ ${pc_mapped%%.*} -lt $minpc ] && [ $num_trim -gt $minreads ]; then flag="Comtaminated"
 		elif [ ${avg_depth%%.*} -lt $mindepth ] && [ $num_trim -lt $minreads ]; then flag="InsufficientData"
-#		elif [ ${pc_mapped%%.*} -lt $minpc ] && [ $num_trim -gt $minreads ]; then flag="NonBovMycobact"
+#		elif [ ${pc_mapped%%.*} -lt $minpc ] && [ $num_trim -gt $minreads ]; then flag="q_OtherMycobact"
 		else flag="CheckRequired"
 	fi
  
@@ -299,7 +306,7 @@ process IDnonbovis{
 	"""
 	outcome=\$(cat outcome.txt)
 	if [ \$outcome != "Pass" ]; then
-	$dependpath/Kraken2/kraken2 --threads 2 --quick $lowmem --db $kraken2db --output - --report ${pair_id}_kraken2.tab --paired ${pair_id}_trim_R1.fastq  ${pair_id}_trim_R2.fastq 
+	$dependpath/Kraken2/kraken2 --threads 2 --quick $lowmem --db $kraken2db --output - --report ${pair_id}_\$outcome_kraken2.tab --paired ${pair_id}_trim_R1.fastq  ${pair_id}_trim_R2.fastq 
 	else
 	echo "ID not required"
 	fi
