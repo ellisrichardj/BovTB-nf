@@ -31,6 +31,7 @@
 *	Version 0.8.3	14/03/19	Add option to reduce memory use by kraken2 if required
 *	Verison 0.8.4	15/03/19	Correct output location of kraken2 tables
 *	Version 0.8.5	25/03/19	Output bam, vcf and consensus to Results directory
+*	Vesrion 0.8.6	26/03/19	Add normalization and filtering of indels in vcf before concensus calling
 */
 
 params.lowmem = ""
@@ -159,13 +160,11 @@ process VCF2Consensus {
 	output:
 	set pair_id, file("${pair_id}_consensus.fas"), file("${pair_id}.fq"), file("${pair_id}.fasta") into consensus
 
-// need to add normalization and filtering before consensus calling
-
 	"""
 	bcftools index ${pair_id}.pileup.vcf.gz
-	bcftools view -O v ${pair_id}.pileup.vcf.gz | perl $pypath/vcfutils.pl vcf2fq - > ${pair_id}.fq
-	python $pypath/fqTofasta.py ${pair_id}.fq
-	bcftools consensus -f $ref -o ${pair_id}_consensus.fas ${pair_id}.pileup.vcf.gz
+	bcftools norm -f $ref ${pair_id}.pileup.vcf.gz -Ob | bcftools filter --IndelGap 5 - -Ob -o ${pair_id}.norm-flt.bcf
+	bcftools index ${pair_id}.norm-flt.bcf
+	bcftools consensus -f $ref ${pair_id}.norm-flt.bcf | sed '/^>/ s/.*/>${pair_id}/' - > ${pair_id}_consensus.fas
 	"""
 }
 
