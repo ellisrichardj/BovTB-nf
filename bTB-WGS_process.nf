@@ -150,7 +150,8 @@ process VarCall {
 process VCF2Consensus {
 	errorStrategy 'ignore'
 
-	publishDir "$params.outdir/Results/consensus", mode: 'copy', pattern: '*_concensus.fas'
+	publishDir "$params.outdir/Results/consensus", mode: 'copy', pattern: '*_consensus.fas'
+	publishDir "$params.outdir/Results/bcf", mode: 'copy', pattern: '*.norm-flt.bcf'
 
 	maxForks 2
 
@@ -158,7 +159,7 @@ process VCF2Consensus {
 	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf2
 
 	output:
-	set pair_id, file("${pair_id}_consensus.fas"), file("${pair_id}.fq"), file("${pair_id}.fasta") into consensus
+	set pair_id, file("${pair_id}_consensus.fas"), file("${pair_id}.norm-flt.bcf") into consensus
 
 	"""
 	bcftools index ${pair_id}.pileup.vcf.gz
