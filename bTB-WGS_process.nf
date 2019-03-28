@@ -142,7 +142,7 @@ process VarCall {
 	"""
 	samtools index ${pair_id}.mapped.sorted.bam
 	samtools mpileup -q 60 -uvf $ref ${pair_id}.mapped.sorted.bam |
-	 bcftools call --ploidy Y -cf GQ - -Oz -o ${pair_id}.pileup.vcf.gz
+	 $dependpath/bcftools/bcftools call --ploidy Y -cf GQ - -Oz -o ${pair_id}.pileup.vcf.gz
 	"""
 }
 
@@ -162,10 +162,10 @@ process VCF2Consensus {
 	set pair_id, file("${pair_id}_consensus.fas"), file("${pair_id}.norm-flt.bcf") into consensus
 
 	"""
-	bcftools index ${pair_id}.pileup.vcf.gz
-	bcftools norm -f $ref ${pair_id}.pileup.vcf.gz -Ob | bcftools filter --IndelGap 5 - -Ob -o ${pair_id}.norm-flt.bcf
-	bcftools index ${pair_id}.norm-flt.bcf
-	bcftools consensus -f $ref ${pair_id}.norm-flt.bcf | sed '/^>/ s/.*/>${pair_id}/' - > ${pair_id}_consensus.fas
+	$dependpath/bcftools/bcftools index ${pair_id}.pileup.vcf.gz
+	$dependpath/bcftools/bcftools norm -f $ref ${pair_id}.pileup.vcf.gz -Ob | $dependpath/bcftools/bcftools filter --IndelGap 5 - -Ob -o ${pair_id}.norm-flt.bcf
+	$dependpath/bcftools/bcftools index ${pair_id}.norm-flt.bcf
+	$dependpath/bcftools/bcftools consensus -f $ref ${pair_id}.norm-flt.bcf | sed '/^>/ s/.*/>${pair_id}/' - > ${pair_id}_consensus.fas
 	"""
 }
 
@@ -247,7 +247,7 @@ process SNPfiltAnnot{
 	set pair_id, file("${pair_id}.pileup_SN_Annotation.csv") into VarAnnotation
 
 	"""
-	bcftools view -O v ${pair_id}.pileup.vcf.gz | python $pypath/snpsFilter.py - ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp}
+	$dependpath/bcftools/bcftools view -O v ${pair_id}.pileup.vcf.gz | python $pypath/snpsFilter.py - ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp}
 	mv _DUO.csv ${pair_id}.pileup_DUO.csv
 	mv _INDEL.csv ${pair_id}.pileup_INDEL.csv
 	mv _SN.csv ${pair_id}.pileup_SN.csv
@@ -301,12 +301,12 @@ process IDnonbovis{
 	val lowmem from lowmem
 
 	output:
-	set pair_id, file("${pair_id}_kraken2.tab") optional true into IDnonbovis
+	set pair_id, file("${pair_id}_*_kraken2.tab") optional true into IDnonbovis
 
 	"""
 	outcome=\$(cat outcome.txt)
 	if [ \$outcome != "Pass" ]; then
-	$dependpath/Kraken2/kraken2 --threads 2 --quick $lowmem --db $kraken2db --output - --report ${pair_id}_\$outcome_kraken2.tab --paired ${pair_id}_trim_R1.fastq  ${pair_id}_trim_R2.fastq 
+	$dependpath/Kraken2/kraken2 --threads 2 --quick $lowmem --db $kraken2db --output - --report ${pair_id}_"\$outcome"_kraken2.tab --paired ${pair_id}_trim_R1.fastq  ${pair_id}_trim_R2.fastq 
 	else
 	echo "ID not required"
 	fi
