@@ -32,7 +32,7 @@
 *	Verison 0.8.4	15/03/19	Correct output location of kraken2 tables
 *	Version 0.8.5	25/03/19	Output bam, vcf and consensus to Results directory
 *	Version 0.8.6	26/03/19	Add normalization and filtering of indels in vcf before concensus calling
-*	Version 0.8.7	29/04/19	Remove intermediary fastq files, rebalance processes and remove redundant processes
+*	Version 0.8.7	29/04/19	Remove intermediary fastq files, rebalance processes and remove redundant process
 */
 
 params.lowmem = ""
@@ -201,11 +201,11 @@ process ReadStats{
 	rm !{pair_id}_*_R1_*.fastq.gz
 	rm !{pair_id}_*_R2_*.fastq.gz
 	uniq_R1=$(grep -c "^+$" !{pair_id}_uniq_R1.fastq)
-	rm 'readlink !{pair_id}_uniq_R1.fastq'
-	rm 'readlink !{pair_id}_uniq_R2.fastq'
+	rm `readlink !{pair_id}_uniq_R1.fastq`
+	rm `readlink !{pair_id}_uniq_R2.fastq`
 	trim_R1=$(grep -c "^+$" !{pair_id}_trim_R1.fastq)
-	rm 'readlink !{pair_id}_trim_R1.fastq'
-	rm 'readlink !{pair_id}_trim_R2.fastq'
+	rm `readlink !{pair_id}_trim_R1.fastq`
+	rm `readlink !{pair_id}_trim_R2.fastq`
 	num_map=$(samtools view -c !{pair_id}.mapped.sorted.bam)
 	avg_depth=$(samtools depth  !{pair_id}.mapped.sorted.bam  |  awk '{sum+=$3} END { print sum/NR}')
 
