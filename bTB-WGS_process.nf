@@ -31,7 +31,8 @@
 *	Version 0.8.3	14/03/19	Add option to reduce memory use by kraken2 if required
 *	Verison 0.8.4	15/03/19	Correct output location of kraken2 tables
 *	Version 0.8.5	25/03/19	Output bam, vcf and consensus to Results directory
-*	Vesrion 0.8.6	26/03/19	Add normalization and filtering of indels in vcf before concensus calling
+*	Version 0.8.6	26/03/19	Add normalization and filtering of indels in vcf before concensus calling
+*	Version 0.8.7	29/04/19	Remove intermediary fastq files, rebalance processes and remove redundant processes
 */
 
 params.lowmem = ""
@@ -61,14 +62,14 @@ Channel
 process Deduplicate {
 	errorStrategy 'ignore'
 
-	maxForks 4
+	maxForks 3
 
 	input:
 	set pair_id, file("${pair_id}_*_R1_*.fastq.gz"), file("${pair_id}_*_R2_*.fastq.gz") from read_pairs
 
 	output:
 	set pair_id, file("${pair_id}_uniq_R1.fastq"), file("${pair_id}_uniq_R2.fastq") into dedup_read_pairs
-	set pair_id, file("${pair_id}_uniq_R1.fastq") into uniq_reads
+	set pair_id, file("${pair_id}_uniq_R1.fastq"), file("${pair_id}_uniq_R2.fastq") into uniq_reads
 
 	"""
 	gunzip -c ${pair_id}_*_R1_*.fastq.gz > ${pair_id}_R1.fastq 
@@ -92,7 +93,7 @@ process Trim {
 	output:
 	set pair_id, file("${pair_id}_trim_R1.fastq"), file("${pair_id}_trim_R2.fastq") into trim_read_pairs
 	set pair_id, file("${pair_id}_trim_R1.fastq"), file("${pair_id}_trim_R2.fastq") into trim_read_pairs2
-	set pair_id, file("${pair_id}_trim_R1.fastq") into trim_reads
+	set pair_id, file("${pair_id}_trim_R1.fastq"), file("${pair_id}_trim_R2.fastq") into trim_reads
 	
 	"""
 	java -jar $dependpath/Trimmomatic-0.38/trimmomatic-0.38.jar PE -threads 3 -phred33 ${pair_id}_uniq_R1.fastq ${pair_id}_uniq_R2.fastq  ${pair_id}_trim_R1.fastq ${pair_id}_fail1.fastq ${pair_id}_trim_R2.fastq ${pair_id}_fail2.fastq ILLUMINACLIP:$adapters:2:30:10 SLIDINGWINDOW:10:20 MINLEN:36
@@ -107,7 +108,7 @@ process Map2Ref {
 
 	publishDir "$params.outdir/Results/bam", mode: 'copy', pattern: '*.sorted.bam'
 
-	maxForks 1
+	maxForks 2
 
 	input:
 	set pair_id, file("${pair_id}_trim_R1.fastq"), file("${pair_id}_trim_R2.fastq") from trim_read_pairs
@@ -127,8 +128,6 @@ process Map2Ref {
 process VarCall {
 	errorStrategy 'ignore'
 
-	publishDir "$params.outdir/Results/vcf", mode: 'copy', pattern: '*.vcf.gz'
-
 	maxForks 4
 
 	input:
@@ -141,8 +140,8 @@ process VarCall {
 
 	"""
 	samtools index ${pair_id}.mapped.sorted.bam
-	samtools mpileup -q 60 -uvf $ref ${pair_id}.mapped.sorted.bam |
-	 $dependpath/bcftools/bcftools call --ploidy Y -cf GQ - -Oz -o ${pair_id}.pileup.vcf.gz
+	$dependpath/bcftools/bcftools mpileup -q 60 -Ou -f $ref ${pair_id}.mapped.sorted.bam |
+	 $dependpath/bcftools/bcftools call --ploidy 1 -cf GQ - -Oz -o ${pair_id}.pileup.vcf.gz
 	"""
 }
 
@@ -190,7 +189,7 @@ process ReadStats{
 	maxForks 2
 
 	input:
-	set pair_id, file("${pair_id}_*_R1_*.fastq.gz"), file("${pair_id}_*_R2_*.fastq.gz"), file("${pair_id}_uniq_R1.fastq"), file("${pair_id}_trim_R1.fastq"), file("${pair_id}.mapped.sorted.bam") from input4stats
+	set pair_id, file("${pair_id}_*_R1_*.fastq.gz"), file("${pair_id}_*_R2_*.fastq.gz"), file("${pair_id}_uniq_R1.fastq"), file("${pair_id}_uniq_R2.fastq"), file("${pair_id}_trim_R1.fastq"), file("${pair_id}_trim_R2.fastq"), file("${pair_id}.mapped.sorted.bam") from input4stats
 
 	output:
 	set pair_id, file("${pair_id}_stats.csv") into stats
@@ -202,9 +201,11 @@ process ReadStats{
 	rm !{pair_id}_*_R1_*.fastq.gz
 	rm !{pair_id}_*_R2_*.fastq.gz
 	uniq_R1=$(grep -c "^+$" !{pair_id}_uniq_R1.fastq)
-	rm !{pair_id}_uniq_R1.fastq
+	rm 'readlink !{pair_id}_uniq_R1.fastq'
+	rm 'readlink !{pair_id}_uniq_R2.fastq'
 	trim_R1=$(grep -c "^+$" !{pair_id}_trim_R1.fastq)
-	rm !{pair_id}_trim_R1.fastq
+	rm 'readlink !{pair_id}_trim_R1.fastq'
+	rm 'readlink !{pair_id}_trim_R2.fastq'
 	num_map=$(samtools view -c !{pair_id}.mapped.sorted.bam)
 	avg_depth=$(samtools depth  !{pair_id}.mapped.sorted.bam  |  awk '{sum+=$3} END { print sum/NR}')
 
@@ -322,23 +323,7 @@ CSSalign
 	.collectFile( name: 'AlignedCSS.meg', sort: true, storeDir: "$PWD/Results", keepHeader: true )
 	.set { Alignment }
 
-/* Generate phyogenetic tree from alignments 
-process DrawTree{
 
-	errorStrategy 'ignore'
-
-	maxForks 2
-
-	input:
-	file("AlignedCSS.meg") from Alignment
-
-	output:
-	file("Tree.nwk") into Tree
-
-	"""
-	megacc -a /home/richard/infer_MP_nucleotide.mao -d AlignedCSS.meg
-	"""
-}*/
 
 
 workflow.onComplete {
