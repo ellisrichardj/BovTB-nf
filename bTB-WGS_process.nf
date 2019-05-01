@@ -31,7 +31,7 @@
 *	Version 0.8.3	14/03/19	Add option to reduce memory use by kraken2 if required
 *	Verison 0.8.4	15/03/19	Correct output location of kraken2 tables
 *	Version 0.8.5	25/03/19	Output bam, vcf and consensus to Results directory
-*	Version 0.8.6	26/03/19	Add normalization and filtering of indels in vcf before concensus calling
+*	Version 0.8.6	26/03/19	Add normalization and filtering of indels in vcf before consensus calling
 *	Version 0.8.7	29/04/19	Remove intermediary fastq files, rebalance processes and remove redundant process
 */
 
