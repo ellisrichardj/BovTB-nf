@@ -46,8 +46,8 @@ wget https://github.com/lh3/samtools/blob/master/bcftools/vcfutils.pl
 
 # kraken2 and associated database
 
-wget http://github.com/DerrickWood/kraken2/archive/v2.0.7-beta.tar.gz && tar xzf v2.0.7-beta.tar.gz && rm -f v2.0.7-beta.tar.gz
-cd kraken2-2.0.7-beta
+wget http://github.com/DerrickWood/kraken2/archive/v2.0.8-beta.tar.gz && tar xzf v2.0.8-beta.tar.gz && rm -f v2.0.8-beta.tar.gz
+cd kraken2-2.0.8-beta
 ./install_kraken2.sh ../Kraken2
 cd ..
 mkdir Kraken2/db
