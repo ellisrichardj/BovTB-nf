@@ -309,8 +309,8 @@ process IDnonbovis{
 	else
 	echo "ID not required"
 	fi
-	rm `readlink !{pair_id}_trim_R1.fastq`
-	rm `readlink !{pair_id}_trim_R2.fastq`
+	rm `readlink ${pair_id}_trim_R1.fastq`
+	rm `readlink ${pair_id}_trim_R2.fastq`
 	"""
 }
 
