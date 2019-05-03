@@ -204,8 +204,6 @@ process ReadStats{
 	rm `readlink !{pair_id}_uniq_R1.fastq`
 	rm `readlink !{pair_id}_uniq_R2.fastq`
 	trim_R1=$(grep -c "^+$" !{pair_id}_trim_R1.fastq)
-	rm `readlink !{pair_id}_trim_R1.fastq`
-	rm `readlink !{pair_id}_trim_R2.fastq`
 	num_map=$(samtools view -c !{pair_id}.mapped.sorted.bam)
 	avg_depth=$(samtools depth  !{pair_id}.mapped.sorted.bam  |  awk '{sum+=$3} END { print sum/NR}')
 
@@ -311,6 +309,8 @@ process IDnonbovis{
 	else
 	echo "ID not required"
 	fi
+	rm `readlink !{pair_id}_trim_R1.fastq`
+	rm `readlink !{pair_id}_trim_R2.fastq`
 	"""
 }
 
