@@ -46,10 +46,6 @@ cd ..
 #sudo make install
 #cd ..
 
-# vcfutils.pl
-
-wget https://github.com/lh3/samtools/blob/master/bcftools/vcfutils.pl
-
 # kraken2 and associated database
 
 wget http://github.com/DerrickWood/kraken2/archive/v2.0.8-beta.tar.gz && tar xzf v2.0.8-beta.tar.gz && rm -f v2.0.8-beta.tar.gz
