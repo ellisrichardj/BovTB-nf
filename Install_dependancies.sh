@@ -5,10 +5,10 @@ set -e
 # The dependancies are generally standard bioinformatics tools
 # There are some standard prerequites for a vanilla linux install such as make, make-guile, gcc, zlib-dev, zlib1g-dev,
 # libncurses5-dev, libbz2-dev, liblzma-dev, python (not python3), python-numpy, python-pip
-# e.g. on Ubuntu: sudo apt install make make-guile gcc zlib-dev zlib1g-dev libncurses5-dev libbz2-dev liblzma-dev python python-numpy, python-pip
+# e.g. on Ubuntu: sudo apt install make make-guile gcc zlib-dev zlib1g-dev libncurses5-dev libbz2-dev liblzma-dev python python-numpy python-pip
 # Followed by pip install biopython
 
-# Make diractory for dependancy install and cd to that directory before running this script
+# Make directory for dependancy install and cd to that directory before running this script
 
 
 # FastUniq
@@ -34,11 +34,17 @@ wget https://github.com/samtools/samtools/releases/download/1.9/samtools-1.9.tar
 cd samtools-1.9; make 
 sudo make install
 cd ..
- 
-wget https://github.com/samtools/bcftools/releases/download/1.9/bcftools-1.9.tar.bz2 && tar xjf bcftools-1.9.tar.bz2 && rm -f bcftools-1.9.tar.bz2
-cd bcftools-1.9; make 
-sudo make install
+
+# use this to install latest commit of bcftools (as opposed to the v1.9 release)
+git clone git://github.com/samtools/htslib.git
+git clone git://github.com/samtools/bcftools.git
+cd bcftools; make
 cd ..
+ 
+#wget https://github.com/samtools/bcftools/releases/download/1.9/bcftools-1.9.tar.bz2 && tar xjf bcftools-1.9.tar.bz2 && rm -f bcftools-1.9.tar.bz2
+#cd bcftools-1.9; make 
+#sudo make install
+#cd ..
 
 # vcfutils.pl
 
