@@ -33,6 +33,7 @@
 *	Version 0.8.5	25/03/19	Output bam, vcf and consensus to Results directory
 *	Version 0.8.6	26/03/19	Add normalization and filtering of indels in vcf before consensus calling
 *	Version 0.8.7	29/04/19	Remove intermediary fastq files, rebalance processes and remove redundant process
+*	Version 0.8.8	03/05/19	More rebalancing and removing redundant output
 */
 
 params.lowmem = ""
@@ -62,7 +63,7 @@ Channel
 process Deduplicate {
 	errorStrategy 'ignore'
 
-	maxForks 3
+	maxForks 2
 
 	input:
 	set pair_id, file("${pair_id}_*_R1_*.fastq.gz"), file("${pair_id}_*_R2_*.fastq.gz") from read_pairs
@@ -85,7 +86,7 @@ process Deduplicate {
 process Trim {
 	errorStrategy 'ignore'
 
-	maxForks 1
+	maxForks 2
 
 	input:
 	set pair_id, file("${pair_id}_uniq_R1.fastq"), file("${pair_id}_uniq_R2.fastq") from dedup_read_pairs
@@ -96,7 +97,7 @@ process Trim {
 	set pair_id, file("${pair_id}_trim_R1.fastq"), file("${pair_id}_trim_R2.fastq") into trim_reads
 	
 	"""
-	java -jar $dependpath/Trimmomatic-0.38/trimmomatic-0.38.jar PE -threads 3 -phred33 ${pair_id}_uniq_R1.fastq ${pair_id}_uniq_R2.fastq  ${pair_id}_trim_R1.fastq ${pair_id}_fail1.fastq ${pair_id}_trim_R2.fastq ${pair_id}_fail2.fastq ILLUMINACLIP:$adapters:2:30:10 SLIDINGWINDOW:10:20 MINLEN:36
+	java -jar $dependpath/Trimmomatic-0.38/trimmomatic-0.38.jar PE -threads 2 -phred33 ${pair_id}_uniq_R1.fastq ${pair_id}_uniq_R2.fastq  ${pair_id}_trim_R1.fastq ${pair_id}_fail1.fastq ${pair_id}_trim_R2.fastq ${pair_id}_fail2.fastq ILLUMINACLIP:$adapters:2:30:10 SLIDINGWINDOW:10:20 MINLEN:36
 	rm ${pair_id}_fail1.fastq
 	rm ${pair_id}_fail2.fastq
 	"""
@@ -271,12 +272,10 @@ process AssignClusterCSS{
 
 	output:
 	file("${pair_id}_stage1.csv") into AssignCluster
-	file("${pair_id}.meg") into CSSalign
 
 	"""
 	gunzip -c ${pair_id}.pileup.vcf.gz > ${pair_id}.pileup.vcf
 	python $pypath/Stage1-test.py ${pair_id}_stats.csv ${stage1pat} $ref test 1 ${min_mean_cov} ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} ${min_qual_nonsnp} ${pair_id}.pileup.vcf
-	mv test/Stage1/test_stage1.meg ${pair_id}.meg 
 	mv _stage1.csv ${pair_id}_stage1.csv
 	"""
 }
@@ -317,12 +316,6 @@ process IDnonbovis{
 /* Combine all cluster assignment data into a single results file */
 AssignCluster
 	.collectFile( name: 'AssignedWGSCluster.csv', sort: true, storeDir: "$PWD/Results", keepHeader: true )
-
-/* Combine all alignments into a single results file */
-CSSalign
-	.collectFile( name: 'AlignedCSS.meg', sort: true, storeDir: "$PWD/Results", keepHeader: true )
-	.set { Alignment }
-
 
 
 
