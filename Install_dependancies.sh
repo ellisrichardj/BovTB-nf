@@ -54,7 +54,7 @@ cd kraken2-2.0.8-beta
 cd ..
 mkdir Kraken2/db
 cd Kraken2/db
-wget https://ccb.jhu.edu/software/kraken2/dl/minikraken2_v1_8GB.tgz && tar xvf minikraken2_v1_8GB.tgz && rm -f minikraken2_v1_8GB.tgz
+wget ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/minikraken2_v1_8GB_201904_UPDATE.tgz && tar xvf minikraken2_v1_8GB.tgz && rm -f minikraken2_v1_8GB.tgz
 cd ../..
 
 # get some test data
