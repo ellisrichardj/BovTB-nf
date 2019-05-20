@@ -59,12 +59,13 @@ cd ../..
 
 # get some test data
 
-#mkdir Data
-#cd Data
-#wget -r -l2 -A ERR84179*.fastq.gz ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR841/ 
-#mv ftp.sra.ebi.ac.uk/vol1/fastq/ERR841//*_1.fastq.gz $PWD
-#mv ftp.sra.ebi.ac.uk/vol1/fastq/ERR841//*_2.fastq.gz $PWD
-#rm -r ftp.sra.ebi.ac.uk/
+mkdir TestData
+cd TestData
+wget -r -l2 -A ERR84179*.fastq.gz ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR841/ 
+mv ftp.sra.ebi.ac.uk/vol1/fastq/ERR841/*/*_1.fastq.gz $PWD
+mv ftp.sra.ebi.ac.uk/vol1/fastq/ERR841/*/*_2.fastq.gz $PWD
+rm -r ftp.sra.ebi.ac.uk/
+cd ..
 
 # anything else??
 
