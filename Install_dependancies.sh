@@ -5,7 +5,7 @@ set -e
 # The dependancies are generally standard bioinformatics tools
 # There are some standard prerequites for a vanilla linux install such as make, make-guile, gcc, zlib-dev, zlib1g-dev,
 # libncurses5-dev, libbz2-dev, liblzma-dev, python (not python3), python-numpy, python-pip
-# e.g. on Ubuntu: sudo apt install make make-guile gcc zlib-dev zlib1g-dev libncurses5-dev libbz2-dev liblzma-dev python python-numpy python-pip
+# e.g. on Ubuntu: sudo apt install make gcc unzip zlib1g-dev libncurses5-dev libbz2-dev liblzma-dev python python-numpy python-pip
 # Followed by pip install biopython
 
 # Make directory for dependancy install and cd to that directory before running this script
