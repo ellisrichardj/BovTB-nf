@@ -36,8 +36,8 @@ sudo make install
 cd ..
 
 # use this to install latest commit of bcftools (as opposed to the v1.9 release)
-git clone git://github.com/samtools/htslib.git
-git clone git://github.com/samtools/bcftools.git
+git clone https://github.com/samtools/htslib.git
+git clone https://github.com/samtools/bcftools.git
 cd bcftools; make
 cd ..
  
