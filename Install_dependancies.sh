@@ -5,7 +5,7 @@ set -e
 # The dependancies are generally standard bioinformatics tools
 # There are some standard prerequites for a vanilla linux install such as make, make-guile, gcc, zlib-dev, zlib1g-dev,
 # libncurses5-dev, libbz2-dev, liblzma-dev, python (not python3), python-numpy, python-pip
-# e.g. on Ubuntu: sudo apt install make make-guile gcc zlib-dev zlib1g-dev libncurses5-dev libbz2-dev liblzma-dev python python-numpy python-pip
+# e.g. on Ubuntu: sudo apt install make gcc unzip zlib1g-dev libncurses5-dev libbz2-dev liblzma-dev python python-numpy python-pip
 # Followed by pip install biopython
 
 # Make directory for dependancy install and cd to that directory before running this script
@@ -36,8 +36,8 @@ sudo make install
 cd ..
 
 # use this to install latest commit of bcftools (as opposed to the v1.9 release)
-git clone git://github.com/samtools/htslib.git
-git clone git://github.com/samtools/bcftools.git
+git clone https://github.com/samtools/htslib.git
+git clone https://github.com/samtools/bcftools.git
 cd bcftools; make
 cd ..
  
@@ -54,17 +54,18 @@ cd kraken2-2.0.8-beta
 cd ..
 mkdir Kraken2/db
 cd Kraken2/db
-wget https://ccb.jhu.edu/software/kraken2/dl/minikraken2_v1_8GB.tgz && tar xvf minikraken2_v1_8GB.tgz && rm -f minikraken2_v1_8GB.tgz
+wget ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/minikraken2_v1_8GB_201904_UPDATE.tgz && tar xvf minikraken2_v1_8GB_201904_UPDATE.tgz && rm -f minikraken2_v1_8GB_201904_UPDATE.tgz
 cd ../..
 
 # get some test data
 
-#mkdir Data
-#cd Data
-#wget -r -l2 -A ERR84179*.fastq.gz ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR841/ 
-#mv ftp.sra.ebi.ac.uk/vol1/fastq/ERR841//*_1.fastq.gz $PWD
-#mv ftp.sra.ebi.ac.uk/vol1/fastq/ERR841//*_2.fastq.gz $PWD
-#rm -r ftp.sra.ebi.ac.uk/
+mkdir TestData
+cd TestData
+wget -r -l2 -A ERR84179*.fastq.gz ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR841/ 
+mv ftp.sra.ebi.ac.uk/vol1/fastq/ERR841/*/*_1.fastq.gz $PWD
+mv ftp.sra.ebi.ac.uk/vol1/fastq/ERR841/*/*_2.fastq.gz $PWD
+rm -r ftp.sra.ebi.ac.uk/
+cd ..
 
 # anything else??
 
