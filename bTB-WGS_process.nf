@@ -129,20 +129,24 @@ process Map2Ref {
 process VarCall {
 	errorStrategy 'ignore'
 
+	publishDir "$params.outdir/Results/vcf", mode: 'copy', pattern: '*.norm-flt.vcf.gz'
+
 	maxForks 4
 
 	input:
 	set pair_id, file("${pair_id}.mapped.sorted.bam") from mapped_bam
 
 	output:
-	set pair_id, file("${pair_id}.pileup.vcf.gz") into vcf
-	set pair_id, file("${pair_id}.pileup.vcf.gz") into vcf2
-	set pair_id, file("${pair_id}.pileup.vcf.gz") into vcf3
+	set pair_id, file("${pair_id}.norm-flt.vcf.gz") into vcf
+	set pair_id, file("${pair_id}.norm-flt.vcf.gz") into vcf2
+	set pair_id, file("${pair_id}.norm-flt.vcf.gz") into vcf3
 
 	"""
 	samtools index ${pair_id}.mapped.sorted.bam
-	$dependpath/bcftools/bcftools mpileup -q 60 -Ou -f $ref ${pair_id}.mapped.sorted.bam |
-	 $dependpath/bcftools/bcftools call --ploidy 1 -cf GQ - -Oz -o ${pair_id}.pileup.vcf.gz
+	$dependpath/bcftools/bcftools mpileup -Q 30 -q 60 -Ou -f $ref ${pair_id}.mapped.sorted.bam |
+	 $dependpath/bcftools/bcftools call --ploidy 1 -cf GQ - -Ou |
+	 $dependpath/bcftools/bcftools norm -f $ref - -Ou |
+	 $dependpath/bcftools/bcftools filter --IndelGap 5 - -Oz -o ${pair_id}.norm-flt.vcf.gz
 	"""
 }
 
@@ -151,21 +155,21 @@ process VCF2Consensus {
 	errorStrategy 'ignore'
 
 	publishDir "$params.outdir/Results/consensus", mode: 'copy', pattern: '*_consensus.fas'
-	publishDir "$params.outdir/Results/bcf", mode: 'copy', pattern: '*.norm-flt.bcf'
+//	publishDir "$params.outdir/Results/bcf", mode: 'copy', pattern: '*.norm-flt.bcf'
 
 	maxForks 2
 
 	input:
-	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf2
+	set pair_id, file("${pair_id}.norm-flt.vcf.gz") from vcf2
 
 	output:
-	set pair_id, file("${pair_id}_consensus.fas"), file("${pair_id}.norm-flt.bcf") into consensus
+	set pair_id, file("${pair_id}_consensus.fas") into consensus //file("${pair_id}.norm-flt.bcf")
 
 	"""
-	$dependpath/bcftools/bcftools index ${pair_id}.pileup.vcf.gz
-	$dependpath/bcftools/bcftools norm -f $ref ${pair_id}.pileup.vcf.gz -Ob | $dependpath/bcftools/bcftools filter --IndelGap 5 - -Ob -o ${pair_id}.norm-flt.bcf
-	$dependpath/bcftools/bcftools index ${pair_id}.norm-flt.bcf
-	$dependpath/bcftools/bcftools consensus -f $ref ${pair_id}.norm-flt.bcf | sed '/^>/ s/.*/>${pair_id}/' - > ${pair_id}_consensus.fas
+	$dependpath/bcftools/bcftools index ${pair_id}.norm-flt.vcf.gz
+#	$dependpath/bcftools/bcftools norm -f $ref ${pair_id}.pileup.vcf.gz -Ob | $dependpath/bcftools/bcftools filter --IndelGap 5 - -Ob -o ${pair_id}.norm-flt.bcf
+#	$dependpath/bcftools/bcftools index ${pair_id}.norm-flt.bcf
+	$dependpath/bcftools/bcftools consensus -f $ref ${pair_id}.norm-flt.vcf.gz | sed '/^>/ s/.*/>${pair_id}/' - > ${pair_id}_consensus.fas
 	"""
 }
 
@@ -240,14 +244,14 @@ process SNPfiltAnnot{
 	maxForks 4
 
 	input:
-	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf3
+	set pair_id, file("${pair_id}.norm-flt.vcf.gz") from vcf3
 
 	output:
 	set pair_id, file("${pair_id}.pileup_SN.csv"), file("${pair_id}.pileup_DUO.csv"), file("${pair_id}.pileup_INDEL.csv") into VarTables
 	set pair_id, file("${pair_id}.pileup_SN_Annotation.csv") into VarAnnotation
 
 	"""
-	$dependpath/bcftools/bcftools view -O v ${pair_id}.pileup.vcf.gz | python $pypath/snpsFilter.py - ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp}
+	$dependpath/bcftools/bcftools view -O v ${pair_id}.norm-flt.vcf.gz | python $pypath/snpsFilter.py - ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp}
 	mv _DUO.csv ${pair_id}.pileup_DUO.csv
 	mv _INDEL.csv ${pair_id}.pileup_INDEL.csv
 	mv _SN.csv ${pair_id}.pileup_SN.csv
@@ -255,7 +259,7 @@ process SNPfiltAnnot{
 	"""
 }
 
-//	Combine data for assign cluster for each sample
+//	Combine inputs to assign cluster for each sample
 
 vcf
 	.join(stats)
@@ -268,13 +272,13 @@ process AssignClusterCSS{
 	maxForks 2
 
 	input:
-	set pair_id, file("${pair_id}.pileup.vcf.gz"), file("${pair_id}_stats.csv") from input4Assign
+	set pair_id, file("${pair_id}.norm-flt.vcf.gz"), file("${pair_id}_stats.csv") from input4Assign
 
 	output:
 	file("${pair_id}_stage1.csv") into AssignCluster
 
 	"""
-	gunzip -c ${pair_id}.pileup.vcf.gz > ${pair_id}.pileup.vcf
+	gunzip -c ${pair_id}.norm-flt.vcf.gz > ${pair_id}.pileup.vcf
 	python $pypath/Stage1-test.py ${pair_id}_stats.csv ${stage1pat} $ref test 1 ${min_mean_cov} ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} ${min_qual_nonsnp} ${pair_id}.pileup.vcf
 	mv _stage1.csv ${pair_id}_stage1.csv
 	"""
