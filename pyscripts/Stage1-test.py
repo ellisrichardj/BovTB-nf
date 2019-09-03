@@ -264,11 +264,12 @@ pfileName=strainsInfo[0].index('Sample')
 pmeanCov=strainsInfo[0].index('MeanCov')
 ppermap=strainsInfo[0].index('%Mapped')
 totalReads=strainsInfo[0].index('NumRawReads')
+genomeCov==strainsInfo[0].index('GenomeCov')
 outcome=strainsInfo[0].index('Outcome')
 strainsInfo=listT(strainsInfo)
-strainsDetails=listT([strainsInfo[pfileName][1:],strainsInfo[pmeanCov][1:],strainsInfo[totalReads][1:],strainsInfo[ppermap][1:],strainsInfo[outcome][1:]])
+strainsDetails=listT([strainsInfo[pfileName][1:],strainsInfo[genomeCov][1:],strainsInfo[pmeanCov][1:],strainsInfo[totalReads][1:],strainsInfo[ppermap][1:],strainsInfo[outcome][1:]])
 
-strainsDetails=[['Sample','MeanCov','NumRawReads','pcMapped','Outcome',]]+strainsDetails
+strainsDetails=[['Sample','GenomeCov','MeanCov','NumRawReads','pcMapped','Outcome',]]+strainsDetails
 print "Processing "+ str(len(strainsDetails))+" samples"
 
 
