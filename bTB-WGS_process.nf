@@ -210,7 +210,11 @@ process ReadStats{
 	rm `readlink !{pair_id}_uniq_R2.fastq`
 	trim_R1=$(grep -c "^+$" !{pair_id}_trim_R1.fastq)
 	num_map=$(samtools view -c !{pair_id}.mapped.sorted.bam)
-	avg_depth=$(samtools depth  !{pair_id}.mapped.sorted.bam  |  awk '{sum+=$3} END { print sum/NR}')
+	samtools depth -a !{pair_id}.mapped.sorted.bam > depth.txt
+	avg_depth=$(awk '{sum+=$3} END { print sum/NR}' depth.txt)
+	zero_cov=$(awk '$3<1 {++count} END {print count}' depth.txt)
+	sites=$(awk '{++count} END {print count}' depth.txt)
+	rm depth.txt
 
 	num_raw=$(($raw_R1*2))
 	num_uniq=$(($uniq_R1*2))
@@ -218,6 +222,7 @@ process ReadStats{
 	pc_aft_dedup=$(echo "scale=2; ($num_uniq*100/$num_raw)" |bc)
 	pc_aft_trim=$(echo "scale=2; ($num_trim*100/$num_raw)" |bc)
 	pc_mapped=$(echo "scale=2; ($num_map*100/$num_trim)" |bc)
+	genome_cov=$(echo "scale=2; (100-($zero_cov*100/$sites))" |bc)
 
 	mindepth=10
 	minpc=60
@@ -230,8 +235,8 @@ process ReadStats{
 		else flag="CheckRequired"
 	fi
  
-	echo "Sample,NumRawReads,NumDedupReads,%afterDedup,NumTrimReads,%afterTrim,NumMappedReads,%Mapped,MeanCov,Outcome" > !{pair_id}_stats.csv
-	echo "!{pair_id},"$num_raw","$num_uniq","$pc_aft_dedup","$num_trim","$pc_aft_trim","$num_map","$pc_mapped","$avg_depth","$flag"" >> !{pair_id}_stats.csv
+	echo "Sample,NumRawReads,NumDedupReads,%afterDedup,NumTrimReads,%afterTrim,NumMappedReads,%Mapped,MeanDepth,GenomeCov,Outcome" > !{pair_id}_stats.csv
+	echo "!{pair_id},"$num_raw","$num_uniq","$pc_aft_dedup","$num_trim","$pc_aft_trim","$num_map","$pc_mapped","$avg_depth","$genome_cov","$flag"" >> !{pair_id}_stats.csv
 	echo "$flag" > outcome.txt
 	'''
 }
