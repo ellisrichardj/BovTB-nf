@@ -146,7 +146,7 @@ process VarCall {
 	$dependpath/bcftools/bcftools mpileup -Q 30 -q 60 -Ou -f $ref ${pair_id}.mapped.sorted.bam |
 	 $dependpath/bcftools/bcftools call --ploidy 1 -cf GQ - -Ou |
 	 $dependpath/bcftools/bcftools norm -f $ref - -Ou |
-	 $dependpath/bcftools/bcftools filter --IndelGap 5 -e 'DP<5' -i 'AF>=0.9' - -Oz -o ${pair_id}.norm-flt.vcf.gz
+	 $dependpath/bcftools/bcftools filter --IndelGap 5 -e 'DP<5 && AF<0.9' - -Oz -o ${pair_id}.norm-flt.vcf.gz
 	"""
 }
 
