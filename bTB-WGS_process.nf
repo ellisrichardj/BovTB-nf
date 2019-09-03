@@ -119,7 +119,7 @@ process Map2Ref {
 	set pair_id, file("${pair_id}.mapped.sorted.bam") into bam4stats
 
 	"""
-	$dependpath/bwa/bwa mem -T10 -M -t2 $ref  ${pair_id}_trim_R1.fastq ${pair_id}_trim_R2.fastq |
+	$dependpath/bwa/bwa mem -M -t2 $ref  ${pair_id}_trim_R1.fastq ${pair_id}_trim_R2.fastq |
 	 samtools view -@2 -ShuF 2308 - |
 	 samtools sort -@2 - -o ${pair_id}.mapped.sorted.bam
 	"""
