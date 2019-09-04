@@ -94,7 +94,7 @@ def comparePatterns(refPat,strPat,groPat):
 #this is the key part that runs the per sample stage1 genotyping
 
 def findGenotypeOneSample(strainsDetailsTittle,strainDetails,pathTBRuns,patternsDetails,patternsBritishBTBDetails,patternsBTBDetails,patternsMic_PinDetails,patternsMicrotiDetails,patternsPinnipediiDetails,refName,qth,pathAux,thMinGoodCov,thCovProp,thqualsnp,thqualnonsnp):    
-    pmeanCov=strainsDetailsTittle.index('MeanCov')
+    pmeanCov=strainsDetailsTittle.index('MeanDepth')
     pfileName=strainsDetailsTittle.index('Sample')
     name=[strainDetails[pfileName]]
     meanCov=float(strainDetails[pmeanCov])
