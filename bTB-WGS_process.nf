@@ -129,7 +129,7 @@ process Map2Ref {
 process VarCall {
 	errorStrategy 'ignore'
 
-	publishDir "$params.outdir/Results/vcf", mode: 'copy', pattern: '*.norm-flt.vcf.gz'
+	publishDir "$params.outdir/Results/vcf", mode: 'copy', pattern: '*.norm.vcf.gz'
 
 	maxForks 4
 
@@ -143,11 +143,11 @@ process VarCall {
 
 	"""
 	samtools index ${pair_id}.mapped.sorted.bam
-	$dependpath/bcftools/bcftools mpileup -Q 30 -q 60 -Ou -f $ref ${pair_id}.mapped.sorted.bam |
+	$dependpath/bcftools/bcftools mpileup -Q 10 -Ou -f $ref ${pair_id}.mapped.sorted.bam |
 	 $dependpath/bcftools/bcftools call --ploidy 1 -cf GQ - -Ou |
-	 $dependpath/bcftools/bcftools norm -f $ref - -Ou |
-	 $dependpath/bcftools/bcftools filter --IndelGap 5 -e 'DP<5 && AF<0.9' - -Oz -o ${pair_id}.norm-flt.vcf.gz
+	 $dependpath/bcftools/bcftools norm -f $ref - -Oz -o ${pair_id}.norm.vcf.gz
 	"""
+//removed from initial vcf output -Ou | $dependpath/bcftools/bcftools filter --IndelGap 5 -e 'DP<5 && AF<0.9' - 
 }
 
 /* Consensus calling */
@@ -160,15 +160,15 @@ process VCF2Consensus {
 	maxForks 2
 
 	input:
-	set pair_id, file("${pair_id}.norm-flt.vcf.gz") from vcf2
+	set pair_id, file("${pair_id}.norm.vcf.gz") from vcf2
 
 	output:
 	set pair_id, file("${pair_id}_consensus.fas") into consensus //file("${pair_id}.norm-flt.bcf")
 
 	"""
-	$dependpath/bcftools/bcftools index ${pair_id}.norm-flt.vcf.gz
-#	$dependpath/bcftools/bcftools norm -f $ref ${pair_id}.pileup.vcf.gz -Ob | $dependpath/bcftools/bcftools filter --IndelGap 5 - -Ob -o ${pair_id}.norm-flt.bcf
-#	$dependpath/bcftools/bcftools index ${pair_id}.norm-flt.bcf
+#	$dependpath/bcftools/bcftools index ${pair_id}.norm.vcf.gz
+	$dependpath/bcftools/bcftools filter --IndelGap 5 -e 'DP<5 && AF<0.8' ${pair_id}.pileup.vcf.gz -Ob -o ${pair_id}.norm-flt.bcf
+	$dependpath/bcftools/bcftools index ${pair_id}.norm-flt.bcf
 	$dependpath/bcftools/bcftools consensus -f $ref ${pair_id}.norm-flt.vcf.gz | sed '/^>/ s/.*/>${pair_id}/' - > ${pair_id}_consensus.fas
 	"""
 }
