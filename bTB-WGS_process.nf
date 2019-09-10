@@ -34,6 +34,7 @@
 *	Version 0.8.6	26/03/19	Add normalization and filtering of indels in vcf before consensus calling
 *	Version 0.8.7	29/04/19	Remove intermediary fastq files, rebalance processes and remove redundant process
 *	Version 0.8.8	03/05/19	More rebalancing and removing redundant output
+*	Version 0.9.0	10/09/19	Filter and mask vcf for consensus calling
 */
 
 params.lowmem = ""
@@ -43,6 +44,7 @@ lowmem = Channel.value("${params.lowmem}")
 
 ref = file(params.ref)
 refgbk = file(params.refgbk)
+rptmask = file(params.rptmask)
 stage1pat = file(params.stage1pat)
 stage2pat = file(params.stage2pat)
 adapters = file(params.adapters)
@@ -117,6 +119,7 @@ process Map2Ref {
 	output:
 	set pair_id, file("${pair_id}.mapped.sorted.bam") into mapped_bam
 	set pair_id, file("${pair_id}.mapped.sorted.bam") into bam4stats
+	set pair_id, file("${pair_id}.mapped.sorted.bam") into bam4mask
 
 	"""
 	$dependpath/bwa/bwa mem -M -t2 $ref  ${pair_id}_trim_R1.fastq ${pair_id}_trim_R2.fastq |
@@ -137,9 +140,9 @@ process VarCall {
 	set pair_id, file("${pair_id}.mapped.sorted.bam") from mapped_bam
 
 	output:
-	set pair_id, file("${pair_id}.norm-flt.vcf.gz") into vcf
-	set pair_id, file("${pair_id}.norm-flt.vcf.gz") into vcf2
-	set pair_id, file("${pair_id}.norm-flt.vcf.gz") into vcf3
+	set pair_id, file("${pair_id}.norm.vcf.gz") into vcf
+	set pair_id, file("${pair_id}.norm.vcf.gz") into vcf2
+	set pair_id, file("${pair_id}.norm.vcf.gz") into vcf3
 
 	"""
 	samtools index ${pair_id}.mapped.sorted.bam
@@ -147,8 +150,31 @@ process VarCall {
 	 $dependpath/bcftools/bcftools call --ploidy 1 -cf GQ - -Ou |
 	 $dependpath/bcftools/bcftools norm -f $ref - -Oz -o ${pair_id}.norm.vcf.gz
 	"""
-//removed from initial vcf output -Ou | $dependpath/bcftools/bcftools filter --IndelGap 5 -e 'DP<5 && AF<0.9' - 
 }
+
+/* Masking known repeats regions and sites with zero coverage */
+process Mask {
+	errorStrategy 'ignore'
+
+	maxForks 2
+
+	input:
+	set pair_id, file("${pair_id}.mapped.sorted.bam") from bam4mask
+
+	output:
+	set pair_id, file("${pair_id}_RptZeroMask.bed") into maskbed
+
+	"""
+	$dependpath/bedtools2/bin/bedtools genomecov -bga -ibam ${pair_id}.mapped.sorted.bam | grep -w "0\$" > ${pair_id}_zerocov.bed
+	cat ${pair_id}_zerocov.bed $rptmask | sort -k1,1 -k2,2n | $dependpath/bedtools2/bin/bedtools merge > ${pair_id}_RptZeroMask.bed
+	"""
+}
+
+// Combine input for consensus calling
+
+maskbed
+	.join(vcf2)
+	.set {vcf_bed}
 
 /* Consensus calling */
 process VCF2Consensus {
@@ -160,16 +186,15 @@ process VCF2Consensus {
 	maxForks 2
 
 	input:
-	set pair_id, file("${pair_id}.norm.vcf.gz") from vcf2
+	set pair_id, file("${pair_id}.norm.vcf.gz"), file("${pair_id}_RptZeroMask.bed") from vcf_bed
 
 	output:
 	set pair_id, file("${pair_id}_consensus.fas") into consensus //file("${pair_id}.norm-flt.bcf")
 
 	"""
-#	$dependpath/bcftools/bcftools index ${pair_id}.norm.vcf.gz
 	$dependpath/bcftools/bcftools filter --IndelGap 5 -e 'DP<5 && AF<0.8' ${pair_id}.pileup.vcf.gz -Ob -o ${pair_id}.norm-flt.bcf
 	$dependpath/bcftools/bcftools index ${pair_id}.norm-flt.bcf
-	$dependpath/bcftools/bcftools consensus -f $ref ${pair_id}.norm-flt.vcf.gz | sed '/^>/ s/.*/>${pair_id}/' - > ${pair_id}_consensus.fas
+	$dependpath/bcftools/bcftools consensus -f $ref -m ${pair_id}_RptZeroMask.bed ${pair_id}.norm-flt.vcf.gz | sed '/^>/ s/.*/>${pair_id}/' - > ${pair_id}_consensus.fas
 	"""
 }
 
@@ -249,14 +274,14 @@ process SNPfiltAnnot{
 	maxForks 4
 
 	input:
-	set pair_id, file("${pair_id}.norm-flt.vcf.gz") from vcf3
+	set pair_id, file("${pair_id}.norm.vcf.gz") from vcf3
 
 	output:
 	set pair_id, file("${pair_id}.pileup_SN.csv"), file("${pair_id}.pileup_DUO.csv"), file("${pair_id}.pileup_INDEL.csv") into VarTables
 	set pair_id, file("${pair_id}.pileup_SN_Annotation.csv") into VarAnnotation
 
 	"""
-	$dependpath/bcftools/bcftools view -O v ${pair_id}.norm-flt.vcf.gz | python $pypath/snpsFilter.py - ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp}
+	$dependpath/bcftools/bcftools view -O v ${pair_id}.norm.vcf.gz | python $pypath/snpsFilter.py - ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp}
 	mv _DUO.csv ${pair_id}.pileup_DUO.csv
 	mv _INDEL.csv ${pair_id}.pileup_INDEL.csv
 	mv _SN.csv ${pair_id}.pileup_SN.csv
@@ -277,13 +302,13 @@ process AssignClusterCSS{
 	maxForks 2
 
 	input:
-	set pair_id, file("${pair_id}.norm-flt.vcf.gz"), file("${pair_id}_stats.csv") from input4Assign
+	set pair_id, file("${pair_id}.norm.vcf.gz"), file("${pair_id}_stats.csv") from input4Assign
 
 	output:
 	file("${pair_id}_stage1.csv") into AssignCluster
 
 	"""
-	gunzip -c ${pair_id}.norm-flt.vcf.gz > ${pair_id}.pileup.vcf
+	gunzip -c ${pair_id}.norm.vcf.gz > ${pair_id}.pileup.vcf
 	python $pypath/Stage1-test.py ${pair_id}_stats.csv ${stage1pat} $ref test 1 ${min_mean_cov} ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} ${min_qual_nonsnp} ${pair_id}.pileup.vcf
 	mv _stage1.csv ${pair_id}_stage1.csv
 	"""
