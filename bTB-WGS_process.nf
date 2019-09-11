@@ -134,7 +134,7 @@ process VarCall {
 
 	publishDir "$params.outdir/Results/vcf", mode: 'copy', pattern: '*.norm.vcf.gz'
 
-	maxForks 4
+	maxForks 2
 
 	input:
 	set pair_id, file("${pair_id}.mapped.sorted.bam") from mapped_bam
@@ -181,20 +181,19 @@ process VCF2Consensus {
 	errorStrategy 'ignore'
 
 	publishDir "$params.outdir/Results/consensus", mode: 'copy', pattern: '*_consensus.fas'
-//	publishDir "$params.outdir/Results/bcf", mode: 'copy', pattern: '*.norm-flt.bcf'
 
 	maxForks 2
 
 	input:
-	set pair_id, file("${pair_id}.norm.vcf.gz"), file("${pair_id}_RptZeroMask.bed") from vcf_bed
+	set pair_id, file("${pair_id}_RptZeroMask.bed"), file("${pair_id}.norm.vcf.gz") from vcf_bed
 
 	output:
-	set pair_id, file("${pair_id}_consensus.fas") into consensus //file("${pair_id}.norm-flt.bcf")
+	set pair_id, file("${pair_id}_consensus.fas") into consensus
 
 	"""
 	$dependpath/bcftools/bcftools filter --IndelGap 5 -e 'DP<5 && AF<0.8' ${pair_id}.norm.vcf.gz -Ob -o ${pair_id}.norm-flt.bcf
 	$dependpath/bcftools/bcftools index ${pair_id}.norm-flt.bcf
-	$dependpath/bcftools/bcftools consensus -f $ref -m ${pair_id}_RptZeroMask.bed ${pair_id}.norm-flt.vcf.gz | sed '/^>/ s/.*/>${pair_id}/' - > ${pair_id}_consensus.fas
+	$dependpath/bcftools/bcftools consensus -f $ref -m ${pair_id}_RptZeroMask.bed ${pair_id}.norm-flt.bcf | sed '/^>/ s/.*/>${pair_id}/' - > ${pair_id}_consensus.fas
 	"""
 }
 
@@ -271,7 +270,7 @@ process SNPfiltAnnot{
 
 	errorStrategy 'ignore'
 
-	maxForks 4
+	maxForks 2
 
 	input:
 	set pair_id, file("${pair_id}.norm.vcf.gz") from vcf3
@@ -299,7 +298,7 @@ vcf
 process AssignClusterCSS{
 	errorStrategy 'ignore'
 
-	maxForks 2
+	maxForks 1
 
 	input:
 	set pair_id, file("${pair_id}.norm.vcf.gz"), file("${pair_id}_stats.csv") from input4Assign
