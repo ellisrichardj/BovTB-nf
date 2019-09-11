@@ -174,7 +174,7 @@ process Mask {
 
 maskbed
 	.join(vcf2)
-	.set {vcf_bed}
+	.set { vcf_bed }
 
 /* Consensus calling */
 process VCF2Consensus {
@@ -192,7 +192,7 @@ process VCF2Consensus {
 	set pair_id, file("${pair_id}_consensus.fas") into consensus //file("${pair_id}.norm-flt.bcf")
 
 	"""
-	$dependpath/bcftools/bcftools filter --IndelGap 5 -e 'DP<5 && AF<0.8' ${pair_id}.pileup.vcf.gz -Ob -o ${pair_id}.norm-flt.bcf
+	$dependpath/bcftools/bcftools filter --IndelGap 5 -e 'DP<5 && AF<0.8' ${pair_id}.norm.vcf.gz -Ob -o ${pair_id}.norm-flt.bcf
 	$dependpath/bcftools/bcftools index ${pair_id}.norm-flt.bcf
 	$dependpath/bcftools/bcftools consensus -f $ref -m ${pair_id}_RptZeroMask.bed ${pair_id}.norm-flt.vcf.gz | sed '/^>/ s/.*/>${pair_id}/' - > ${pair_id}_consensus.fas
 	"""
