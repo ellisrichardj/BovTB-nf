@@ -35,6 +35,7 @@
 *	Version 0.8.7	29/04/19	Remove intermediary fastq files, rebalance processes and remove redundant process
 *	Version 0.8.8	03/05/19	More rebalancing and removing redundant output
 *	Version 0.9.0	10/09/19	Filter and mask vcf for consensus calling
+*	Version 0.9.1	19/09/19	Remove SNP filtering and annotation process as no longer required
 */
 
 params.lowmem = ""
@@ -165,8 +166,10 @@ process Mask {
 	set pair_id, file("${pair_id}_RptZeroMask.bed") into maskbed
 
 	"""
-	$dependpath/bedtools2/bin/bedtools genomecov -bga -ibam ${pair_id}.mapped.sorted.bam | grep -w "0\$" > ${pair_id}_zerocov.bed
-	cat ${pair_id}_zerocov.bed $rptmask | sort -k1,1 -k2,2n | $dependpath/bedtools2/bin/bedtools merge > ${pair_id}_RptZeroMask.bed
+	$dependpath/bedtools2/bin/bedtools genomecov -bga -ibam ${pair_id}.mapped.sorted.bam |
+	 grep -w "0\$" > ${pair_id}_zerocov.bed
+	cat ${pair_id}_zerocov.bed $rptmask | sort -k1,1 -k2,2n |
+	 $dependpath/bedtools2/bin/bedtools merge > ${pair_id}_RptZeroMask.bed
 	"""
 }
 
@@ -193,7 +196,8 @@ process VCF2Consensus {
 	"""
 	$dependpath/bcftools/bcftools filter --IndelGap 5 -e 'DP<5 && AF<0.8' ${pair_id}.norm.vcf.gz -Ob -o ${pair_id}.norm-flt.bcf
 	$dependpath/bcftools/bcftools index ${pair_id}.norm-flt.bcf
-	$dependpath/bcftools/bcftools consensus -f $ref -m ${pair_id}_RptZeroMask.bed ${pair_id}.norm-flt.bcf | sed '/^>/ s/.*/>${pair_id}/' - > ${pair_id}_consensus.fas
+	$dependpath/bcftools/bcftools consensus -f $ref -m ${pair_id}_RptZeroMask.bed ${pair_id}.norm-flt.bcf |
+	 sed '/^>/ s/.*/>${pair_id}/' - > ${pair_id}_consensus.fas
 	"""
 }
 
@@ -265,7 +269,7 @@ process ReadStats{
 	'''
 }
 
-/* SNP filtering and annotation */
+/* SNP filtering and annotation 
 process SNPfiltAnnot{
 
 	errorStrategy 'ignore'
@@ -286,7 +290,7 @@ process SNPfiltAnnot{
 	mv _SN.csv ${pair_id}.pileup_SN.csv
 	python $pypath/annotateSNPs.py ${pair_id}.pileup_SN.csv $refgbk $ref
 	"""
-}
+}*/
 
 //	Combine inputs to assign cluster for each sample
 
