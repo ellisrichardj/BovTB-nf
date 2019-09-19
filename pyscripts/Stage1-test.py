@@ -206,19 +206,19 @@ def readTVSFile(fname):
     fileIn.close()
     return dataOut
 
-def writeGenotypeMatrixToMega(snpsMatrixT,patternMatrix,megaTitle,patho):
-    megaMatrix=["#mega","!Title "+megaTitle+";","!Format DataType=DNA;","!Description None;"]
-    megaMatrix=megaMatrix+["#"+snpsMatrixT[2][0][0]+"\t"+"".join([x[0] for x in snpsMatrixT[2][3:]])]
-    for row in snpsMatrixT[3:]:
-        megaMatrix = megaMatrix + ["#"+row[0][0]+"\t"+"".join([x[2] for x in row[3:]])]
-    if patternMatrix[0][1:]!=reduce(operator.add,snpsMatrixT[0][3:]):
-        print "error"
-    else:
-        for row in patternMatrix[4:]:
-            megaMatrix = megaMatrix + ["#"+row[0]+"\t"+"".join([x for x in row[1:]])]
-    fileOut=open(os.path.join(patho,megaTitle+".meg"),"wb")
-    fileOut.write("\n".join(megaMatrix))
-    print "file "+os.path.join(patho,megaTitle+".meg")+" saved."
+#def writeGenotypeMatrixToMega(snpsMatrixT,patternMatrix,megaTitle,patho):
+#    megaMatrix=["#mega","!Title "+megaTitle+";","!Format DataType=DNA;","!Description None;"]
+#    megaMatrix=megaMatrix+["#"+snpsMatrixT[2][0][0]+"\t"+"".join([x[0] for x in snpsMatrixT[2][3:]])]
+#    for row in snpsMatrixT[3:]:
+#        megaMatrix = megaMatrix + ["#"+row[0][0]+"\t"+"".join([x[2] for x in row[3:]])]
+#    if patternMatrix[0][1:]!=reduce(operator.add,snpsMatrixT[0][3:]):
+#        print "error"
+#    else:
+#        for row in patternMatrix[4:]:
+#            megaMatrix = megaMatrix + ["#"+row[0]+"\t"+"".join([x for x in row[1:]])]
+#    fileOut=open(os.path.join(patho,megaTitle+".meg"),"wb")
+#    fileOut.write("\n".join(megaMatrix))
+#    print "file "+os.path.join(patho,megaTitle+".meg")+" saved."
 
 #Output standard fasta instead of mega format (bed - vcf - fasta?)
 #def writeSNPfasta(
@@ -311,5 +311,5 @@ os.system("rm -R "+pathAux)
 writeCSV(outFileName,maxPats)
 maxPats=[maxPats[0]]+sorted(maxPats[1:],key=lambda x: x[0])
 writeCSV(outFileName,maxPats)
-writeGenotypeMatrixToMega(maxPatsQ,patternsDetails,TBRun+"_stage1",pathResutls)
+#writeGenotypeMatrixToMega(maxPatsQ,patternsDetails,TBRun+"_stage1",pathResutls)
 
