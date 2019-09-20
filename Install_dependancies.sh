@@ -46,6 +46,12 @@ cd ..
 #sudo make install
 #cd ..
 
+# bedtools
+
+wget https://github.com/arq5x/bedtools2/releases/download/v2.29.0/bedtools-2.29.0.tar.gz && tar xzf bedtools-2.29.0.tar.gz && rm -f bedtools-2.29.0.tar.gz
+cd bedtools2; make
+cd ..
+
 # kraken2 and associated database
 
 wget http://github.com/DerrickWood/kraken2/archive/v2.0.8-beta.tar.gz && tar xzf v2.0.8-beta.tar.gz && rm -f v2.0.8-beta.tar.gz
