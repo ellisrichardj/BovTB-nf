@@ -144,7 +144,6 @@ process VarCall {
 	output:
 	set pair_id, file("${pair_id}.norm.vcf.gz") into vcf
 	set pair_id, file("${pair_id}.norm.vcf.gz") into vcf2
-//	set pair_id, file("${pair_id}.norm.vcf.gz") into vcf3
 
 	"""
 	samtools index ${pair_id}.mapped.sorted.bam
@@ -216,7 +215,7 @@ raw_uniq
 	.join(trim_bam)
 	.set { input4stats }
 
-/* Mapping Statistics*/
+/* Generation of data quality and mapping statistics*/
 process ReadStats{
 	errorStrategy 'ignore'
 
@@ -270,36 +269,14 @@ process ReadStats{
 	'''
 }
 
-/* SNP filtering and annotation 
-process SNPfiltAnnot{
-
-	errorStrategy 'ignore'
-
-	maxForks 2
-
-	input:
-	set pair_id, file("${pair_id}.norm.vcf.gz") from vcf3
-
-	output:
-	set pair_id, file("${pair_id}.pileup_SN.csv"), file("${pair_id}.pileup_DUO.csv"), file("${pair_id}.pileup_INDEL.csv") into VarTables
-	set pair_id, file("${pair_id}.pileup_SN_Annotation.csv") into VarAnnotation
-
-	"""
-	$dependpath/bcftools/bcftools view -O v ${pair_id}.norm.vcf.gz | python $pypath/snpsFilter.py - ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp}
-	mv _DUO.csv ${pair_id}.pileup_DUO.csv
-	mv _INDEL.csv ${pair_id}.pileup_INDEL.csv
-	mv _SN.csv ${pair_id}.pileup_SN.csv
-	python $pypath/annotateSNPs.py ${pair_id}.pileup_SN.csv $refgbk $ref
-	"""
-}*/
-
 //	Combine inputs to assign cluster for each sample
 
 vcf
 	.join(stats)
 	.set { input4Assign }
 
-/* Assigns cluster by matching patterns of cluster specific SNPs */
+/* Assigns cluster by matching patterns of cluster specific SNPs
+Compares SNPs identified in vcf file to lists in reference table */
 process AssignClusterCSS{
 	errorStrategy 'ignore'
 
