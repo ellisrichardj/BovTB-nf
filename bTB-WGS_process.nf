@@ -36,6 +36,7 @@
 *	Version 0.8.8	03/05/19	More rebalancing and removing redundant output
 *	Version 0.9.0	10/09/19	Filter and mask vcf for consensus calling
 *	Version 0.9.1	19/09/19	Remove SNP filtering and annotation process as no longer required
+*	Version 0.9.2	20/09/19	Exclude indels from consensus calling step
 */
 
 params.lowmem = ""
@@ -143,7 +144,7 @@ process VarCall {
 	output:
 	set pair_id, file("${pair_id}.norm.vcf.gz") into vcf
 	set pair_id, file("${pair_id}.norm.vcf.gz") into vcf2
-	set pair_id, file("${pair_id}.norm.vcf.gz") into vcf3
+//	set pair_id, file("${pair_id}.norm.vcf.gz") into vcf3
 
 	"""
 	samtools index ${pair_id}.mapped.sorted.bam
@@ -196,7 +197,7 @@ process VCF2Consensus {
 	"""
 	$dependpath/bcftools/bcftools filter --IndelGap 5 -e 'DP<5 && AF<0.8' ${pair_id}.norm.vcf.gz -Ob -o ${pair_id}.norm-flt.bcf
 	$dependpath/bcftools/bcftools index ${pair_id}.norm-flt.bcf
-	$dependpath/bcftools/bcftools consensus -f $ref -m ${pair_id}_RptZeroMask.bed ${pair_id}.norm-flt.bcf |
+	$dependpath/bcftools/bcftools consensus -f $ref -e 'TYPE="indel"' -m ${pair_id}_RptZeroMask.bed ${pair_id}.norm-flt.bcf |
 	 sed '/^>/ s/.*/>${pair_id}/' - > ${pair_id}_consensus.fas
 	"""
 }
