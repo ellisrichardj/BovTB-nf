@@ -11,7 +11,6 @@ if len(args)<2:
     pathPatterns="/home/richard/MyScripts/BovTB-nf/references/Stage1_patterns"
     refName="Mycbovis-2122-97_LT708304.fas"
     TBRun ="test"
-    ncpus=1
     qth=8
     thMinGoodCov=2
     thCovProp=0.2
@@ -24,13 +23,12 @@ else:
     pathPatterns=sys.argv[2]
     refName=sys.argv[3]
     TBRun=sys.argv[4]
-    ncpus=int(sys.argv[5])
-    qth=int(sys.argv[6])
-    thMinGoodCov=int(sys.argv[7])
-    thCovProp=float(sys.argv[8])
-    thqualsnp=int(sys.argv[9])
-    thqualnonsnp=int(sys.argv[10])
-    strainVCF=sys.argv[11]
+    qth=int(sys.argv[5])
+    thMinGoodCov=int(sys.argv[6])
+    thCovProp=float(sys.argv[7])
+    thqualsnp=int(sys.argv[8])
+    thqualnonsnp=int(sys.argv[9])
+    strainVCF=sys.argv[10]
 
 patternsDetailsFile="CSSnewclusters_LT708304_040719.csv" #"CSSnewclusters_181115.csv" #"patterns20131220.csv"
 patternsBritishBTBFile="patternsBritishBTB_LT708304.csv"
@@ -64,9 +62,10 @@ def listT(matrix):
 
 # compares a strain gSS base calls (strpat) to the a genotype group pattern give by groPat
 # strPat is the reference patern.
-# it return two values, a list with the percentage of matches (M), mismatches (MM), 
-#     noCovered (N) and anomalous (A). The second list is a vector with the same length as strPat        
-#     with Ms, MMs,Ns and As as corresponding. 
+# it returns two values, a list with the percentage of matches (M), mismatches (MM), notCovered (N) and anomalous (A).
+#     The second list is a vector with the same length as strPat with Ms, MMs,Ns and As as corresponding.       
+
+#This part does the matching - finds the closest reference SNP combination on a per sample basis     
 def comparePatterns(refPat,strPat,groPat):
     lenPat=len(refPat)
     if lenPat!=len(strPat) or lenPat!=len(groPat):
@@ -98,7 +97,6 @@ def findGenotypeOneSample(strainsDetailsTittle,strainDetails,pathTBRuns,patterns
     pfileName=strainsDetailsTittle.index('Sample')
     name=[strainDetails[pfileName]]
     meanCov=float(strainDetails[pmeanCov])
-#    print "Procesing "+strainDetails[pfileName]
  
     strainStatsFileName=strainDetails[pfileName]+".pileup.vcf"
     
@@ -109,7 +107,10 @@ def findGenotypeOneSample(strainsDetailsTittle,strainDetails,pathTBRuns,patterns
     posToExtractMicroti=map(int,patternsMicrotiDetails[0][1:])
     posToExtractPinnipedii=map(int,patternsPinnipediiDetails[0][1:])
 
+
 # change flags in this section
+# If the match to the first reference dataset is above a given threshold the process moves to the next
+# This is iterated depending on the outcomes
     [strainGSSInfo,strainGSSBritishBTBInfo,strainGSSBTBInfo,strainGSSMic_PinInfo,strainGSSMicrotiInfo,strainGSSPinnipediiInfo]=getSnpsStatsStrain(strainStatsFileName,[posToExtract,posToExtractBritishBTB,posToExtractBTB,posToExtractMic_Pin,posToExtractMicroti,posToExtractPinnipedii],pathAux,thMinGoodCov,thCovProp,thqualsnp,thqualnonsnp)  
     if meanCov >=qth:
         BTB=getBestMatchPattern(patternsBTBDetails,strainGSSBTBInfo)[0]
@@ -206,23 +207,6 @@ def readTVSFile(fname):
     fileIn.close()
     return dataOut
 
-#def writeGenotypeMatrixToMega(snpsMatrixT,patternMatrix,megaTitle,patho):
-#    megaMatrix=["#mega","!Title "+megaTitle+";","!Format DataType=DNA;","!Description None;"]
-#    megaMatrix=megaMatrix+["#"+snpsMatrixT[2][0][0]+"\t"+"".join([x[0] for x in snpsMatrixT[2][3:]])]
-#    for row in snpsMatrixT[3:]:
-#        megaMatrix = megaMatrix + ["#"+row[0][0]+"\t"+"".join([x[2] for x in row[3:]])]
-#    if patternMatrix[0][1:]!=reduce(operator.add,snpsMatrixT[0][3:]):
-#        print "error"
-#    else:
-#        for row in patternMatrix[4:]:
-#            megaMatrix = megaMatrix + ["#"+row[0]+"\t"+"".join([x for x in row[1:]])]
-#    fileOut=open(os.path.join(patho,megaTitle+".meg"),"wb")
-#    fileOut.write("\n".join(megaMatrix))
-#    print "file "+os.path.join(patho,megaTitle+".meg")+" saved."
-
-#Output standard fasta instead of mega format (bed - vcf - fasta?)
-#def writeSNPfasta(
-
 def getBestMatchPattern(patternsDetails,strainGSSInfo):
     print "matching positions:"
     hal=[int(x) for x in patternsDetails[0][1:]]==[x[0] for x in strainGSSInfo]
@@ -272,7 +256,6 @@ strainsDetails=listT([strainsInfo[pfileName][1:],strainsInfo[genomeCov][1:],stra
 strainsDetails=[['Sample','GenomeCov','MeanDepth','NumRawReads','pcMapped','Outcome',]]+strainsDetails
 print "Processing "+ str(len(strainsDetails))+" samples"
 
-
 patternsDetails=listT(readTable(os.path.join(pathPatterns,patternsDetailsFile),","))
 patternsBritishBTBDetails=listT(readTable(os.path.join(pathPatterns,patternsBritishBTBFile),","))
 patternsPinnipediiDetails=listT(readTable(os.path.join(pathPatterns,patternsPinnipediiFile),","))
@@ -286,30 +269,16 @@ maxPatsQ=[[[patternsDetails[0][0]]]+[["PredGenotype"],["M-MM-N-A"]]+[[x] for x i
 
 outFileName="_stage1.csv"
 
-if ncpus==1:
-    for strainDetails in strainsDetails[1:]:
-        print strainDetails
-        [maxPat,strainQ]=findGenotypeOneSample(strainsDetails[0],strainDetails,pathTBRuns,patternsDetails,patternsBritishBTBDetails,patternsBTBDetails,patternsMic_PinDetails,patternsMicrotiDetails,patternsPinnipediiDetails,refName,qth,pathAux,thMinGoodCov,thCovProp,thqualsnp,thqualnonsnp)
-        maxPats=maxPats+[maxPat]
-        if strainQ!="NA":
-            maxPatsQ=maxPatsQ+[strainQ]
-else:
-    ppservers = ()
-    job_server = pp.Server(ncpus, ppservers=ppservers)
-    print "Starting pp with", job_server.get_ncpus(), "workers"
-    jobs = [(strainDetails, job_server.submit(findGenotypeOneSample,(strainsDetails[0],strainDetails,pathTBRuns,patternsDetails,patternsBritishBTBDetails,patternsBTBDetails,patternsMic_PinDetails,patternsMicrotiDetails,patternsPinnipediiDetails,refName,qth,pathAux,thMinGoodCov,thCovProp,thqualsnp,thqualnonsnp),(writeCSV,readTable,listT,readTVSFile,getSnpsStatsStrain,getBestMatchPattern,comparePatterns,getSnpsStatsStrain,),("csv","operator","os","collections"))) for strainDetails in strainsDetails[1:]]
-    cont=1
-    for strainDetails, job in jobs:
-        [maxPat,strainQ]=job()
-        maxPats=maxPats+[maxPat]
-        if strainQ!="NA":
-            maxPatsQ=maxPatsQ+[strainQ]
-        cont=cont+1
+for strainDetails in strainsDetails[1:]:
+    print strainDetails
+    [maxPat,strainQ]=findGenotypeOneSample(strainsDetails[0],strainDetails,pathTBRuns,patternsDetails,patternsBritishBTBDetails,patternsBTBDetails,patternsMic_PinDetails,patternsMicrotiDetails,patternsPinnipediiDetails,refName,qth,pathAux,thMinGoodCov,thCovProp,thqualsnp,thqualnonsnp)
+    maxPats=maxPats+[maxPat]
+    if strainQ!="NA":
+        maxPatsQ=maxPatsQ+[strainQ]
 
 os.system("rm -R "+pathAux)
 
 writeCSV(outFileName,maxPats)
 maxPats=[maxPats[0]]+sorted(maxPats[1:],key=lambda x: x[0])
 writeCSV(outFileName,maxPats)
-#writeGenotypeMatrixToMega(maxPatsQ,patternsDetails,TBRun+"_stage1",pathResutls)
 
