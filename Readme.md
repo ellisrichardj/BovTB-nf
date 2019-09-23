@@ -9,7 +9,7 @@ It has been built to run using nextflow, using standard bioinformatic tools for 
 -	Trimmomatic
 -	bwa
 -	samtools and bcftools
--	vcfutils.pl
+-	bedtools
 -	Kraken2 (and database)
 
 ## Installation

@@ -34,6 +34,9 @@
 *	Version 0.8.6	26/03/19	Add normalization and filtering of indels in vcf before consensus calling
 *	Version 0.8.7	29/04/19	Remove intermediary fastq files, rebalance processes and remove redundant process
 *	Version 0.8.8	03/05/19	More rebalancing and removing redundant output
+*	Version 0.9.0	10/09/19	Filter and mask vcf for consensus calling
+*	Version 0.9.1	19/09/19	Remove SNP filtering and annotation process as no longer required
+*	Version 0.9.2	20/09/19	Exclude indels from consensus calling step
 */
 
 params.lowmem = ""
@@ -43,6 +46,7 @@ lowmem = Channel.value("${params.lowmem}")
 
 ref = file(params.ref)
 refgbk = file(params.refgbk)
+rptmask = file(params.rptmask)
 stage1pat = file(params.stage1pat)
 stage2pat = file(params.stage2pat)
 adapters = file(params.adapters)
@@ -117,9 +121,10 @@ process Map2Ref {
 	output:
 	set pair_id, file("${pair_id}.mapped.sorted.bam") into mapped_bam
 	set pair_id, file("${pair_id}.mapped.sorted.bam") into bam4stats
+	set pair_id, file("${pair_id}.mapped.sorted.bam") into bam4mask
 
 	"""
-	$dependpath/bwa/bwa mem -T10 -M -t2 $ref  ${pair_id}_trim_R1.fastq ${pair_id}_trim_R2.fastq |
+	$dependpath/bwa/bwa mem -M -t2 $ref  ${pair_id}_trim_R1.fastq ${pair_id}_trim_R2.fastq |
 	 samtools view -@2 -ShuF 2308 - |
 	 samtools sort -@2 - -o ${pair_id}.mapped.sorted.bam
 	"""
@@ -129,43 +134,70 @@ process Map2Ref {
 process VarCall {
 	errorStrategy 'ignore'
 
-	maxForks 4
+	publishDir "$params.outdir/Results/vcf", mode: 'copy', pattern: '*.norm.vcf.gz'
+
+	maxForks 2
 
 	input:
 	set pair_id, file("${pair_id}.mapped.sorted.bam") from mapped_bam
 
 	output:
-	set pair_id, file("${pair_id}.pileup.vcf.gz") into vcf
-	set pair_id, file("${pair_id}.pileup.vcf.gz") into vcf2
-	set pair_id, file("${pair_id}.pileup.vcf.gz") into vcf3
+	set pair_id, file("${pair_id}.norm.vcf.gz") into vcf
+	set pair_id, file("${pair_id}.norm.vcf.gz") into vcf2
 
 	"""
 	samtools index ${pair_id}.mapped.sorted.bam
-	$dependpath/bcftools/bcftools mpileup -q 60 -Ou -f $ref ${pair_id}.mapped.sorted.bam |
-	 $dependpath/bcftools/bcftools call --ploidy 1 -cf GQ - -Oz -o ${pair_id}.pileup.vcf.gz
+	$dependpath/bcftools/bcftools mpileup -Q 10 -Ou -f $ref ${pair_id}.mapped.sorted.bam |
+	 $dependpath/bcftools/bcftools call --ploidy 1 -cf GQ - -Ou |
+	 $dependpath/bcftools/bcftools norm -f $ref - -Oz -o ${pair_id}.norm.vcf.gz
 	"""
 }
+
+/* Masking known repeats regions and sites with zero coverage */
+process Mask {
+	errorStrategy 'ignore'
+
+	maxForks 2
+
+	input:
+	set pair_id, file("${pair_id}.mapped.sorted.bam") from bam4mask
+
+	output:
+	set pair_id, file("${pair_id}_RptZeroMask.bed") into maskbed
+
+	"""
+	$dependpath/bedtools2/bin/bedtools genomecov -bga -ibam ${pair_id}.mapped.sorted.bam |
+	 grep -w "0\$" > ${pair_id}_zerocov.bed
+	cat ${pair_id}_zerocov.bed $rptmask | sort -k1,1 -k2,2n |
+	 $dependpath/bedtools2/bin/bedtools merge > ${pair_id}_RptZeroMask.bed
+	"""
+}
+
+// Combine input for consensus calling
+
+maskbed
+	.join(vcf2)
+	.set { vcf_bed }
 
 /* Consensus calling */
 process VCF2Consensus {
 	errorStrategy 'ignore'
 
 	publishDir "$params.outdir/Results/consensus", mode: 'copy', pattern: '*_consensus.fas'
-	publishDir "$params.outdir/Results/bcf", mode: 'copy', pattern: '*.norm-flt.bcf'
 
 	maxForks 2
 
 	input:
-	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf2
+	set pair_id, file("${pair_id}_RptZeroMask.bed"), file("${pair_id}.norm.vcf.gz") from vcf_bed
 
 	output:
-	set pair_id, file("${pair_id}_consensus.fas"), file("${pair_id}.norm-flt.bcf") into consensus
+	set pair_id, file("${pair_id}_consensus.fas") into consensus
 
 	"""
-	$dependpath/bcftools/bcftools index ${pair_id}.pileup.vcf.gz
-	$dependpath/bcftools/bcftools norm -f $ref ${pair_id}.pileup.vcf.gz -Ob | $dependpath/bcftools/bcftools filter --IndelGap 5 - -Ob -o ${pair_id}.norm-flt.bcf
+	$dependpath/bcftools/bcftools filter --IndelGap 5 -e 'DP<5 && AF<0.8' ${pair_id}.norm.vcf.gz -Ob -o ${pair_id}.norm-flt.bcf
 	$dependpath/bcftools/bcftools index ${pair_id}.norm-flt.bcf
-	$dependpath/bcftools/bcftools consensus -f $ref ${pair_id}.norm-flt.bcf | sed '/^>/ s/.*/>${pair_id}/' - > ${pair_id}_consensus.fas
+	$dependpath/bcftools/bcftools consensus -f $ref -e 'TYPE="indel"' -m ${pair_id}_RptZeroMask.bed ${pair_id}.norm-flt.bcf |
+	 sed '/^>/ s/.*/>${pair_id}/' - > ${pair_id}_consensus.fas
 	"""
 }
 
@@ -183,7 +215,7 @@ raw_uniq
 	.join(trim_bam)
 	.set { input4stats }
 
-/* Mapping Statistics*/
+/* Generation of data quality and mapping statistics*/
 process ReadStats{
 	errorStrategy 'ignore'
 
@@ -206,7 +238,11 @@ process ReadStats{
 	rm `readlink !{pair_id}_uniq_R2.fastq`
 	trim_R1=$(grep -c "^+$" !{pair_id}_trim_R1.fastq)
 	num_map=$(samtools view -c !{pair_id}.mapped.sorted.bam)
-	avg_depth=$(samtools depth  !{pair_id}.mapped.sorted.bam  |  awk '{sum+=$3} END { print sum/NR}')
+	samtools depth -a !{pair_id}.mapped.sorted.bam > depth.txt
+	avg_depth=$(awk '{sum+=$3} END { print sum/NR}' depth.txt)
+	zero_cov=$(awk '$3<1 {++count} END {print count}' depth.txt)
+	sites=$(awk '{++count} END {print count}' depth.txt)
+	rm depth.txt
 
 	num_raw=$(($raw_R1*2))
 	num_uniq=$(($uniq_R1*2))
@@ -214,6 +250,7 @@ process ReadStats{
 	pc_aft_dedup=$(echo "scale=2; ($num_uniq*100/$num_raw)" |bc)
 	pc_aft_trim=$(echo "scale=2; ($num_trim*100/$num_raw)" |bc)
 	pc_mapped=$(echo "scale=2; ($num_map*100/$num_trim)" |bc)
+	genome_cov=$(echo "scale=2; (100-($zero_cov*100/$sites))" |bc)
 
 	mindepth=10
 	minpc=60
@@ -226,56 +263,34 @@ process ReadStats{
 		else flag="CheckRequired"
 	fi
  
-	echo "Sample,NumRawReads,NumDedupReads,%afterDedup,NumTrimReads,%afterTrim,NumMappedReads,%Mapped,MeanCov,Outcome" > !{pair_id}_stats.csv
-	echo "!{pair_id},"$num_raw","$num_uniq","$pc_aft_dedup","$num_trim","$pc_aft_trim","$num_map","$pc_mapped","$avg_depth","$flag"" >> !{pair_id}_stats.csv
+	echo "Sample,NumRawReads,NumDedupReads,%afterDedup,NumTrimReads,%afterTrim,NumMappedReads,%Mapped,MeanDepth,GenomeCov,Outcome" > !{pair_id}_stats.csv
+	echo "!{pair_id},"$num_raw","$num_uniq","$pc_aft_dedup","$num_trim","$pc_aft_trim","$num_map","$pc_mapped","$avg_depth","$genome_cov","$flag"" >> !{pair_id}_stats.csv
 	echo "$flag" > outcome.txt
 	'''
 }
 
-/* SNP filtering and annotation */
-process SNPfiltAnnot{
-
-	errorStrategy 'ignore'
-
-	maxForks 4
-
-	input:
-	set pair_id, file("${pair_id}.pileup.vcf.gz") from vcf3
-
-	output:
-	set pair_id, file("${pair_id}.pileup_SN.csv"), file("${pair_id}.pileup_DUO.csv"), file("${pair_id}.pileup_INDEL.csv") into VarTables
-	set pair_id, file("${pair_id}.pileup_SN_Annotation.csv") into VarAnnotation
-
-	"""
-	$dependpath/bcftools/bcftools view -O v ${pair_id}.pileup.vcf.gz | python $pypath/snpsFilter.py - ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp}
-	mv _DUO.csv ${pair_id}.pileup_DUO.csv
-	mv _INDEL.csv ${pair_id}.pileup_INDEL.csv
-	mv _SN.csv ${pair_id}.pileup_SN.csv
-	python $pypath/annotateSNPs.py ${pair_id}.pileup_SN.csv $refgbk $ref
-	"""
-}
-
-//	Combine data for assign cluster for each sample
+//	Combine inputs to assign cluster for each sample
 
 vcf
 	.join(stats)
 	.set { input4Assign }
 
-/* Assigns cluster by matching patterns of cluster specific SNPs */
+/* Assigns cluster by matching patterns of cluster specific SNPs
+Compares SNPs identified in vcf file to lists in reference table */
 process AssignClusterCSS{
 	errorStrategy 'ignore'
 
-	maxForks 2
+	maxForks 1
 
 	input:
-	set pair_id, file("${pair_id}.pileup.vcf.gz"), file("${pair_id}_stats.csv") from input4Assign
+	set pair_id, file("${pair_id}.norm.vcf.gz"), file("${pair_id}_stats.csv") from input4Assign
 
 	output:
 	file("${pair_id}_stage1.csv") into AssignCluster
 
 	"""
-	gunzip -c ${pair_id}.pileup.vcf.gz > ${pair_id}.pileup.vcf
-	python $pypath/Stage1-test.py ${pair_id}_stats.csv ${stage1pat} $ref test 1 ${min_mean_cov} ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} ${min_qual_nonsnp} ${pair_id}.pileup.vcf
+	gunzip -c ${pair_id}.norm.vcf.gz > ${pair_id}.pileup.vcf
+	python $pypath/Stage1-test.py ${pair_id}_stats.csv ${stage1pat} $ref test ${min_mean_cov} ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} ${min_qual_nonsnp} ${pair_id}.pileup.vcf
 	mv _stage1.csv ${pair_id}_stage1.csv
 	"""
 }
