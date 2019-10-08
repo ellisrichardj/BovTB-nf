@@ -82,5 +82,5 @@ cd ..
 echo "params.dependPath = "\"$PWD"\"" >> BovTB-nf/nextflow.config
 echo "params.kraken2db = "\"$PWD"/Kraken2/db\"" >> BovTB-nf/nextflow.config
 
-echo "Dependancies installed sucessfully!"
+echo "Dependancies installed successfully!"
 
