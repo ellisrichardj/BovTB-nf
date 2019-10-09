@@ -39,6 +39,7 @@
 *	Version 0.9.2	20/09/19	Exclude indels from consensus calling step
 */
 
+/* Default parameters */
 params.lowmem = ""
 params.reads = "$PWD/*_{S*_R1,S*_R2}*.fastq.gz"
 params.outdir = "$PWD"
@@ -55,7 +56,8 @@ pypath = file(params.pypath)
 dependpath = file(params.dependPath)
 kraken2db = file(params.kraken2db)
 
-/*	Collect pairs of fastq files and infer sample names */
+/*	Collect pairs of fastq files and infer sample names
+Define the input raw sequening data files */
 Channel
     .fromFilePairs( params.reads, flat: true )
     .ifEmpty { error "Cannot find any reads matching: ${params.reads}" }
@@ -63,7 +65,8 @@ Channel
 	read_pairs.into { read_pairs; raw_reads }
 
 
-/* remove duplicates from raw data */
+/* remove duplicates from raw data
+This process removes potential duplicate data (sequencing and optical replcaites from the raw data set */
 process Deduplicate {
 	errorStrategy 'ignore'
 
@@ -86,7 +89,8 @@ process Deduplicate {
 	"""
 }	
 
-/* trim adapters and low quality bases from fastq data */
+/* trim adapters and low quality bases from fastq data
+Removes the adapters which are added during the lab processing and and any low quality data */
 process Trim {
 	errorStrategy 'ignore'
 
@@ -107,7 +111,8 @@ process Trim {
 	"""
 }
 
-/* map to reference sequence */
+/* map to reference sequence
+Aligns the individiual sequence reads to the reference genome */
 process Map2Ref {
 	errorStrategy 'ignore'
 
@@ -130,7 +135,8 @@ process Map2Ref {
 	"""
 }
 
-/* Variant calling */
+/* Variant calling
+Determines where the sample differs from the reference genome */
 process VarCall {
 	errorStrategy 'ignore'
 
@@ -153,7 +159,8 @@ process VarCall {
 	"""
 }
 
-/* Masking known repeats regions and sites with zero coverage */
+/* Masking known repeats regions and sites with zero coverage
+Ensure that consensus only includes regions of the genome where there is high confidence */
 process Mask {
 	errorStrategy 'ignore'
 
@@ -174,6 +181,7 @@ process Mask {
 }
 
 // Combine input for consensus calling
+// Joins relevant files for the same sample as input to the next process
 
 maskbed
 	.join(vcf2)
@@ -202,6 +210,7 @@ process VCF2Consensus {
 }
 
 //	Combine data for generating per sample statistics
+// Joins relevant files for the same sample as input to the next process
 
 raw_reads
 	.join(uniq_reads)
@@ -215,7 +224,9 @@ raw_uniq
 	.join(trim_bam)
 	.set { input4stats }
 
-/* Generation of data quality and mapping statistics*/
+/* Generation of data quality and mapping statistics
+Calculate numbe of raw reads, unique reads, trimmed reads, proportion aligned to reference genome */
+
 process ReadStats{
 	errorStrategy 'ignore'
 
@@ -230,14 +241,13 @@ process ReadStats{
 
 	shell:
 	'''
-	raw_R1=$(zgrep -c "^+$" !{pair_id}_*_R1_*.fastq.gz)
+	raw_R1=$(zgrep -c "^+$" !{pair_id}_*_R1_*.fastq.gz) # counts number of reads in file
 	rm !{pair_id}_*_R1_*.fastq.gz
 	rm !{pair_id}_*_R2_*.fastq.gz
-	uniq_R1=$(grep -c "^+$" !{pair_id}_uniq_R1.fastq)
-	rm `readlink !{pair_id}_uniq_R1.fastq`
+	uniq_R1=$(grep -c "^+$" !{pair_id}_uniq_R1.fastq) # counts number of reads in file	rm `readlink !{pair_id}_uniq_R1.fastq`
 	rm `readlink !{pair_id}_uniq_R2.fastq`
-	trim_R1=$(grep -c "^+$" !{pair_id}_trim_R1.fastq)
-	num_map=$(samtools view -c !{pair_id}.mapped.sorted.bam)
+	trim_R1=$(grep -c "^+$" !{pair_id}_trim_R1.fastq) # counts number of reads in file
+    num_map=$(samtools view -c !{pair_id}.mapped.sorted.bam)
 	samtools depth -a !{pair_id}.mapped.sorted.bam > depth.txt
 	avg_depth=$(awk '{sum+=$3} END { print sum/NR}' depth.txt)
 	zero_cov=$(awk '$3<1 {++count} END {print count}' depth.txt)
@@ -256,6 +266,8 @@ process ReadStats{
 	minpc=60
 	minreads=600000
 	
+    # this section assigns 'flags' based on the number of reads and the proportion mapping to reference genome
+    
 	if [ ${avg_depth%%.*} -ge $mindepth ] && [ ${pc_mapped%%.*} -gt $minpc ]; then flag="Pass"
 		elif [ ${avg_depth%%.*} -lt $mindepth ] && [ ${pc_mapped%%.*} -lt $minpc ] && [ $num_trim -gt $minreads ]; then flag="Comtaminated"
 		elif [ ${avg_depth%%.*} -lt $mindepth ] && [ $num_trim -lt $minreads ]; then flag="InsufficientData"
@@ -270,6 +282,7 @@ process ReadStats{
 }
 
 //	Combine inputs to assign cluster for each sample
+// Joins relevant files for the same sample as input to the next process
 
 vcf
 	.join(stats)
@@ -277,6 +290,7 @@ vcf
 
 /* Assigns cluster by matching patterns of cluster specific SNPs
 Compares SNPs identified in vcf file to lists in reference table */
+
 process AssignClusterCSS{
 	errorStrategy 'ignore'
 
@@ -296,12 +310,15 @@ process AssignClusterCSS{
 }
 
 // Collect data to ID any non-M.bovis samples
+// Joins relevant files for the same sample as input to the next process
 
 Outcome
 	.join(trim_read_pairs2)
 	.set { IDdata }
 
-/* Identify any non-M.bovis samples using kraken */
+/* Identify any non-M.bovis samples using kraken
+Samples with flag != 'Pass' are processed to detemine which microbe is present */
+
 process IDnonbovis{
 	errorStrategy 'ignore'
 
@@ -329,6 +346,7 @@ process IDnonbovis{
 }
 
 /* Combine all cluster assignment data into a single results file */
+
 AssignCluster
 	.collectFile( name: 'AssignedWGSCluster.csv', sort: true, storeDir: "$PWD/Results", keepHeader: true )
 
