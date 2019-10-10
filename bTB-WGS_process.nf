@@ -68,7 +68,8 @@ Channel
 /* remove duplicates from raw data
 This process removes potential duplicate data (sequencing and optical replcaites from the raw data set */
 process Deduplicate {
-	errorStrategy 'ignore'
+	errorStrategy 'finish'
+    tag "$pair_id"
 
 	maxForks 2
 
@@ -92,7 +93,8 @@ process Deduplicate {
 /* trim adapters and low quality bases from fastq data
 Removes the adapters which are added during the lab processing and and any low quality data */
 process Trim {
-	errorStrategy 'ignore'
+	errorStrategy 'finish'
+    tag "$pair_id"
 
 	maxForks 2
 
@@ -114,7 +116,8 @@ process Trim {
 /* map to reference sequence
 Aligns the individiual sequence reads to the reference genome */
 process Map2Ref {
-	errorStrategy 'ignore'
+	errorStrategy 'finish'
+    tag "$pair_id"
 
 	publishDir "$params.outdir/Results/bam", mode: 'copy', pattern: '*.sorted.bam'
 
@@ -138,7 +141,8 @@ process Map2Ref {
 /* Variant calling
 Determines where the sample differs from the reference genome */
 process VarCall {
-	errorStrategy 'ignore'
+	errorStrategy 'finish'
+    tag "$pair_id"
 
 	publishDir "$params.outdir/Results/vcf", mode: 'copy', pattern: '*.norm.vcf.gz'
 
@@ -162,7 +166,8 @@ process VarCall {
 /* Masking known repeats regions and sites with zero coverage
 Ensure that consensus only includes regions of the genome where there is high confidence */
 process Mask {
-	errorStrategy 'ignore'
+	errorStrategy 'finish'
+    tag "$pair_id"
 
 	maxForks 2
 
@@ -189,7 +194,8 @@ maskbed
 
 /* Consensus calling */
 process VCF2Consensus {
-	errorStrategy 'ignore'
+	errorStrategy 'finish'
+    tag "$pair_id"
 
 	publishDir "$params.outdir/Results/consensus", mode: 'copy', pattern: '*_consensus.fas'
 
@@ -228,7 +234,8 @@ raw_uniq
 Calculate numbe of raw reads, unique reads, trimmed reads, proportion aligned to reference genome */
 
 process ReadStats{
-	errorStrategy 'ignore'
+	errorStrategy 'finish'
+    tag "$pair_id"
 
 	maxForks 2
 
@@ -292,7 +299,8 @@ vcf
 Compares SNPs identified in vcf file to lists in reference table */
 
 process AssignClusterCSS{
-	errorStrategy 'ignore'
+	errorStrategy 'finish'
+    tag "$pair_id"
 
 	maxForks 1
 
@@ -320,7 +328,8 @@ Outcome
 Samples with flag != 'Pass' are processed to detemine which microbe is present */
 
 process IDnonbovis{
-	errorStrategy 'ignore'
+	errorStrategy 'finish'
+    tag "$pair_id"    
 
 	publishDir "$params.outdir/Results/NonBovID", mode: 'copy', pattern: '*.tab'
 
