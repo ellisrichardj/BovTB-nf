@@ -61,21 +61,7 @@ cd ..
 mkdir Kraken2/db
 cd Kraken2/db
 wget ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/minikraken2_v1_8GB_201904_UPDATE.tgz && tar xvf minikraken2_v1_8GB_201904_UPDATE.tgz && rm -f minikraken2_v1_8GB_201904_UPDATE.tgz
-cd ../..
-
-# get some test data
-
-mkdir TestData
-cd TestData
-wget -r -l2 -A ERR84179*.fastq.gz ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR841/ 
-mv ftp.sra.ebi.ac.uk/vol1/fastq/ERR841/*/*_1.fastq.gz $PWD
-mv ftp.sra.ebi.ac.uk/vol1/fastq/ERR841/*/*_2.fastq.gz $PWD
-rm -r ftp.sra.ebi.ac.uk/
 cd ..
-
-# anything else??
-
-
 
 # Add locations to nextflow.config
 
@@ -84,3 +70,17 @@ echo "params.kraken2db = "\"$PWD"/Kraken2/db\"" >> BovTB-nf/nextflow.config
 
 echo "Dependancies installed successfully!"
 
+# get some test data
+
+cd ..
+
+mkdir TestData
+cd TestData
+wget -r -l2 -A ERR84179*.fastq.gz ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR841/ 
+mv ftp.sra.ebi.ac.uk/vol1/fastq/ERR841/*/*_1.fastq.gz $PWD
+mv ftp.sra.ebi.ac.uk/vol1/fastq/ERR841/*/*_2.fastq.gz $PWD
+rm -r ftp.sra.ebi.ac.uk/
+
+cd ..
+
+# anything else??
