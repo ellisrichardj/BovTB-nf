@@ -37,6 +37,7 @@
 *	Version 0.9.0	10/09/19	Filter and mask vcf for consensus calling
 *	Version 0.9.1	19/09/19	Remove SNP filtering and annotation process as no longer required
 *	Version 0.9.2	20/09/19	Exclude indels from consensus calling step
+*   Version 0.9.3   11/10/19    Move ReadStats to standalone shell script
 */
 
 /* Default parameters */
@@ -211,7 +212,7 @@ process VCF2Consensus {
 	$dependpath/bcftools/bcftools filter --IndelGap 5 -e 'DP<5 && AF<0.8' ${pair_id}.norm.vcf.gz -Ob -o ${pair_id}.norm-flt.bcf
 	$dependpath/bcftools/bcftools index ${pair_id}.norm-flt.bcf
 	$dependpath/bcftools/bcftools consensus -f $ref -e 'TYPE="indel"' -m ${pair_id}_RptZeroMask.bed ${pair_id}.norm-flt.bcf |
-	 sed '/^>/ s/.*/>${pair_id}/' - > ${pair_id}_consensus.fas
+	 sed '/^>/ s/.*/>${pair_id}/' > ${pair_id}_consensus.fas
 	"""
 }
 
@@ -246,46 +247,9 @@ process ReadStats{
 	set pair_id, file("${pair_id}_stats.csv") into stats
 	set pair_id, file('outcome.txt') into Outcome
 
-	shell:
-	'''
-	raw_R1=$(zgrep -c "^+$" !{pair_id}_*_R1_*.fastq.gz) # counts number of reads in file
-	rm !{pair_id}_*_R1_*.fastq.gz
-	rm !{pair_id}_*_R2_*.fastq.gz
-	uniq_R1=$(grep -c "^+$" !{pair_id}_uniq_R1.fastq) # counts number of reads in file	rm `readlink !{pair_id}_uniq_R1.fastq`
-	rm `readlink !{pair_id}_uniq_R2.fastq`
-	trim_R1=$(grep -c "^+$" !{pair_id}_trim_R1.fastq) # counts number of reads in file
-    num_map=$(samtools view -c !{pair_id}.mapped.sorted.bam)
-	samtools depth -a !{pair_id}.mapped.sorted.bam > depth.txt
-	avg_depth=$(awk '{sum+=$3} END { print sum/NR}' depth.txt)
-	zero_cov=$(awk '$3<1 {++count} END {print count}' depth.txt)
-	sites=$(awk '{++count} END {print count}' depth.txt)
-	rm depth.txt
-
-	num_raw=$(($raw_R1*2))
-	num_uniq=$(($uniq_R1*2))
-	num_trim=$(($trim_R1*2))
-	pc_aft_dedup=$(echo "scale=2; ($num_uniq*100/$num_raw)" |bc)
-	pc_aft_trim=$(echo "scale=2; ($num_trim*100/$num_raw)" |bc)
-	pc_mapped=$(echo "scale=2; ($num_map*100/$num_trim)" |bc)
-	genome_cov=$(echo "scale=2; (100-($zero_cov*100/$sites))" |bc)
-
-	mindepth=10
-	minpc=60
-	minreads=600000
-	
-    # this section assigns 'flags' based on the number of reads and the proportion mapping to reference genome
-    
-	if [ ${avg_depth%%.*} -ge $mindepth ] && [ ${pc_mapped%%.*} -gt $minpc ]; then flag="Pass"
-		elif [ ${avg_depth%%.*} -lt $mindepth ] && [ ${pc_mapped%%.*} -lt $minpc ] && [ $num_trim -gt $minreads ]; then flag="Comtaminated"
-		elif [ ${avg_depth%%.*} -lt $mindepth ] && [ $num_trim -lt $minreads ]; then flag="InsufficientData"
-#		elif [ ${pc_mapped%%.*} -lt $minpc ] && [ $num_trim -gt $minreads ]; then flag="q_OtherMycobact"
-		else flag="CheckRequired"
-	fi
- 
-	echo "Sample,NumRawReads,NumDedupReads,%afterDedup,NumTrimReads,%afterTrim,NumMappedReads,%Mapped,MeanDepth,GenomeCov,Outcome" > !{pair_id}_stats.csv
-	echo "!{pair_id},"$num_raw","$num_uniq","$pc_aft_dedup","$num_trim","$pc_aft_trim","$num_map","$pc_mapped","$avg_depth","$genome_cov","$flag"" >> !{pair_id}_stats.csv
-	echo "$flag" > outcome.txt
-	'''
+    """
+    ReadStats.sh "$pair_id"
+    """
 }
 
 //	Combine inputs to assign cluster for each sample
@@ -329,7 +293,7 @@ Samples with flag != 'Pass' are processed to detemine which microbe is present *
 
 process IDnonbovis{
 	errorStrategy 'finish'
-    tag "$pair_id"    
+    tag "$pair_id"
 
 	publishDir "$params.outdir/Results/NonBovID", mode: 'copy', pattern: '*.tab'
 
