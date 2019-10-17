@@ -38,6 +38,7 @@
 *	Version 0.9.1	19/09/19	Remove SNP filtering and annotation process as no longer required
 *	Version 0.9.2	20/09/19	Exclude indels from consensus calling step
 *   Version 0.9.3   11/10/19    Move ReadStats to standalone shell script
+*	Version 0.9.4	17/10/19	Add Data source and datestamp to output files and directories
 */
 
 /* Default parameters */
@@ -65,6 +66,13 @@ Channel
 	.set { read_pairs } 
 	read_pairs.into { read_pairs; raw_reads }
 
+// Collect name of data folder and analysis run date
+FirstFile = file( params.reads ).first()
+	DataPath = FirstFile.getParent()
+	GetTopDir = ~/\/\*\//
+	TopDir = DataPath - GetTopDir
+	params.DataDir = TopDir.last()
+	params.today = new Date().format('ddMMMYY')
 
 /* remove duplicates from raw data
 This process removes potential duplicate data (sequencing and optical replcaites from the raw data set */
@@ -120,7 +128,7 @@ process Map2Ref {
 	errorStrategy 'finish'
     tag "$pair_id"
 
-	publishDir "$params.outdir/Results/bam", mode: 'copy', pattern: '*.sorted.bam'
+	publishDir "$params.outdir/Results_${params.DataDir}_${params.today}/bam", mode: 'copy', pattern: '*.sorted.bam'
 
 	maxForks 2
 
@@ -145,7 +153,7 @@ process VarCall {
 	errorStrategy 'finish'
     tag "$pair_id"
 
-	publishDir "$params.outdir/Results/vcf", mode: 'copy', pattern: '*.norm.vcf.gz'
+	publishDir "$params.outdir/Results_${params.DataDir}_${params.today}/vcf", mode: 'copy', pattern: '*.norm.vcf.gz'
 
 	maxForks 2
 
@@ -198,7 +206,7 @@ process VCF2Consensus {
 	errorStrategy 'finish'
     tag "$pair_id"
 
-	publishDir "$params.outdir/Results/consensus", mode: 'copy', pattern: '*_consensus.fas'
+	publishDir "$params.outdir/Results_${params.DataDir}_${params.today}/consensus", mode: 'copy', pattern: '*_consensus.fas'
 
 	maxForks 2
 
@@ -295,7 +303,7 @@ process IDnonbovis{
 	errorStrategy 'finish'
     tag "$pair_id"
 
-	publishDir "$params.outdir/Results/NonBovID", mode: 'copy', pattern: '*.tab'
+	publishDir "$params.outdir/Results_${params.DataDir}_${params.today}/NonBovID", mode: 'copy', pattern: '*.tab'
 
 	maxForks 1
 
@@ -321,13 +329,12 @@ process IDnonbovis{
 /* Combine all cluster assignment data into a single results file */
 
 AssignCluster
-	.collectFile( name: 'AssignedWGSCluster.csv', sort: true, storeDir: "$PWD/Results", keepHeader: true )
-
+	.collectFile( name: "${params.DataDir}_AssignedWGSCluster_${params.today}.csv", sort: true, storeDir: "$PWD/Results_${params.DataDir}_${params.today}", keepHeader: true )
 
 
 workflow.onComplete {
 		log.info "Completed sucessfully:	$workflow.success"		
 		log.info "Nextflow Version:	$workflow.nextflow.version"
 		log.info "Duration:		$workflow.duration"
-		log.info "Output Directory:	$params.outdir/Results"
+		log.info "Output Directory:	$params.outdir/Results_${params.DataDir}_${params.today}"
 }
