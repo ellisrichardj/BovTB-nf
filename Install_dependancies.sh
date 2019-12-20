@@ -4,8 +4,8 @@ set -e
 # This script will fetch and install the dependancies required for the BovTB-nf pipeline.
 # The dependancies are generally standard bioinformatics tools
 # There are some standard prerequites for a vanilla linux install such as make, make-guile, gcc, zlib-dev, zlib1g-dev,
-# libncurses5-dev, libbz2-dev, liblzma-dev, python3, python3-numpy, python3-pip
-# e.g. on Ubuntu: sudo apt install make gcc unzip zlib1g-dev libncurses5-dev libbz2-dev liblzma-dev python3 python3-numpy python3-pip
+# libncurses5-dev, libbz2-dev, liblzma-dev, curl, python3, python3-numpy, python3-pip
+# e.g. on Ubuntu: sudo apt install make gcc unzip zlib1g-dev libncurses5-dev libbz2-dev liblzma-dev libcurl4-openssl-dev python3 python3-numpy python3-pip
 # Followed by pip3 install biopython
 
 # Make directory for dependancy install and cd to that directory before running this script
@@ -61,7 +61,7 @@ cd ..
 mkdir Kraken2/db
 cd Kraken2/db
 wget ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/minikraken2_v1_8GB_201904_UPDATE.tgz && tar xvf minikraken2_v1_8GB_201904_UPDATE.tgz && rm -f minikraken2_v1_8GB_201904_UPDATE.tgz
-cd ..
+cd ../..
 
 # Add locations to nextflow.config
 
