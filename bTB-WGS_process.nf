@@ -37,8 +37,9 @@
 *	Version 0.9.0	10/09/19	Filter and mask vcf for consensus calling
 *	Version 0.9.1	19/09/19	Remove SNP filtering and annotation process as no longer required
 *	Version 0.9.2	20/09/19	Exclude indels from consensus calling step
-*   Version 0.9.3   11/10/19    Move ReadStats to standalone shell script
+*	Version 0.9.3   11/10/19	Move ReadStats to standalone shell script
 *	Version 0.9.4	17/10/19	Add Data source and datestamp to output files and directories
+*	Version 0.9.5	20/12/19	Update to Python3 and lastest samtools/bcftools (1.10)
 */
 
 /* Default parameters */
