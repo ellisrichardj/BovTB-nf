@@ -4,9 +4,9 @@ set -e
 # This script will fetch and install the dependancies required for the BovTB-nf pipeline.
 # The dependancies are generally standard bioinformatics tools
 # There are some standard prerequites for a vanilla linux install such as make, make-guile, gcc, zlib-dev, zlib1g-dev,
-# libncurses5-dev, libbz2-dev, liblzma-dev, python (not python3), python-numpy, python-pip
-# e.g. on Ubuntu: sudo apt install make gcc unzip zlib1g-dev libncurses5-dev libbz2-dev liblzma-dev python python-numpy python-pip
-# Followed by pip install biopython
+# libncurses5-dev, libbz2-dev, liblzma-dev, python3, python3-numpy, python3-pip
+# e.g. on Ubuntu: sudo apt install make gcc unzip zlib1g-dev libncurses5-dev libbz2-dev liblzma-dev python3 python3-numpy python3-pip
+# Followed by pip3 install biopython
 
 # Make directory for dependancy install and cd to that directory before running this script
 
