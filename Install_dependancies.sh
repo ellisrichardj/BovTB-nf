@@ -30,21 +30,21 @@ cd ..
 
 # samtools and bcftools
 
-wget https://github.com/samtools/samtools/releases/download/1.9/samtools-1.9.tar.bz2 && tar xjf samtools-1.9.tar.bz2 && rm -f samtools-1.9.tar.bz2
-cd samtools-1.9; make 
+wget https://github.com/samtools/samtools/releases/download/1.9/samtools-1.9.tar.bz2 && tar xjf samtools-1.10.tar.bz2 && rm -f samtools-1.10.tar.bz2
+cd samtools-1.10; make 
 sudo make install
 cd ..
 
 # use this to install latest commit of bcftools (as opposed to the v1.9 release)
-git clone https://github.com/samtools/htslib.git
-git clone https://github.com/samtools/bcftools.git
-cd bcftools; make
-cd ..
- 
-#wget https://github.com/samtools/bcftools/releases/download/1.9/bcftools-1.9.tar.bz2 && tar xjf bcftools-1.9.tar.bz2 && rm -f bcftools-1.9.tar.bz2
-#cd bcftools-1.9; make 
-#sudo make install
+#git clone https://github.com/samtools/htslib.git
+#git clone https://github.com/samtools/bcftools.git
+#cd bcftools; make
 #cd ..
+ 
+wget https://github.com/samtools/bcftools/releases/download/1.9/bcftools-1.9.tar.bz2 && tar xjf bcftools-1.10.1.tar.bz2 && rm -f bcftools-1.10.1.tar.bz2
+cd bcftools-1.9; make 
+sudo make install
+cd ..
 
 # bedtools
 
