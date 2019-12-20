@@ -31,7 +31,7 @@ else:
     thqualnonsnp=int(sys.argv[9])
     strainVCF=sys.argv[10]
 
-patternsDetailsFile="CSSnewclusters_LT708304_040719.csv" #"CSSnewclusters_181115.csv" #"patterns20131220.csv" "CSSnewclusters_LT708304_181217.csv"
+patternsDetailsFile="CSSnewclusters_LT708304_230119.csv" #"CSSnewclusters_181115.csv" #"patterns20131220.csv" "CSSnewclusters_LT708304_181217.csv"
 patternsBritishBTBFile="patternsBritishBTB_LT708304.csv"
 patternsPinnipediiFile="patternsPinnipedii_LT708304.csv"
 patternsMic_PinFile="patternsMic_Pin_LT708304.csv"
