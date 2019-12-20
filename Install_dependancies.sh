@@ -30,7 +30,7 @@ cd ..
 
 # samtools and bcftools
 
-wget https://github.com/samtools/samtools/releases/download/1.9/samtools-1.9.tar.bz2 && tar xjf samtools-1.10.tar.bz2 && rm -f samtools-1.10.tar.bz2
+wget https://github.com/samtools/samtools/releases/download/1.10/samtools-1.10.tar.bz2 && tar xjf samtools-1.10.tar.bz2 && rm -f samtools-1.10.tar.bz2
 cd samtools-1.10; make 
 sudo make install
 cd ..
@@ -41,8 +41,8 @@ cd ..
 #cd bcftools; make
 #cd ..
  
-wget https://github.com/samtools/bcftools/releases/download/1.9/bcftools-1.9.tar.bz2 && tar xjf bcftools-1.10.1.tar.bz2 && rm -f bcftools-1.10.1.tar.bz2
-cd bcftools-1.9; make 
+wget https://github.com/samtools/bcftools/releases/download/1.10.1/bcftools-1.10.1.tar.bz2 && tar xjf bcftools-1.10.1.tar.bz2 && rm -f bcftools-1.10.1.tar.bz2
+cd bcftools-1.10.1; make 
 sudo make install
 cd ..
 
