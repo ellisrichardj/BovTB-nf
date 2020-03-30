@@ -63,6 +63,13 @@ cd Kraken2/db
 wget ftp://ftp.ccb.jhu.edu/pub/data/kraken2_dbs/minikraken2_v1_8GB_201904_UPDATE.tgz && tar xvf minikraken2_v1_8GB_201904_UPDATE.tgz && rm -f minikraken2_v1_8GB_201904_UPDATE.tgz
 cd ../..
 
+# bracken
+
+wget https://github.com/jenniferlu717/Bracken/archive/v2.5.3.tar.gz && tar xzf v2.5.3.tar.gz && rm -f v2.5.3.tar.gz
+cd Bracken-2.5.3
+./install_bracken.sh ../bracken
+cd ..
+
 # Add locations to nextflow.config
 
 echo "params.dependPath = "\"$PWD"\"" >> BovTB-nf/nextflow.config

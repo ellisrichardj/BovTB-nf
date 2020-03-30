@@ -40,6 +40,7 @@
 *	Version 0.9.3   11/10/19	Move ReadStats to standalone shell script
 *	Version 0.9.4	17/10/19	Add Data source and datestamp to output files and directories
 *	Version 0.9.5	20/12/19	Update to Python3 and lastest samtools/bcftools (1.10)
+*	Version 0.9.6	30/03/20	Add Bracken for parsing kraken2 output
 */
 
 /* Default parameters */
@@ -298,7 +299,8 @@ Outcome
 	.set { IDdata }
 
 /* Identify any non-M.bovis samples using kraken
-Samples with flag != 'Pass' are processed to detemine which microbe is present */
+Samples with flag != 'Pass' are processed to detemine which microbe is present 
+Bracken parses the output to generate a top 10 list of species*/
 
 process IDnonbovis{
 	errorStrategy 'finish'
@@ -313,12 +315,14 @@ process IDnonbovis{
 	val lowmem from lowmem
 
 	output:
-	set pair_id, file("${pair_id}_*_kraken2.tab") optional true into IDnonbovis
+	set pair_id, file("${pair_id}_*_brackensort.tab") optional true into IDnonbovis
 
 	"""
 	outcome=\$(cat outcome.txt)
 	if [ \$outcome != "Pass" ]; then
 	$dependpath/Kraken2/kraken2 --threads 2 --quick $lowmem --db $kraken2db --output - --report ${pair_id}_"\$outcome"_kraken2.tab --paired ${pair_id}_trim_R1.fastq  ${pair_id}_trim_R2.fastq 
+	$dependpath/Bracken/bracken -d $kraken2db -r 150 -l S -t 10 -w out.test -i ${pair_id}_"\$outcome"_kraken2.tab -o ${pair_id}_"\$outcome"_bracken.out
+	sed 1d ${pair_id}_"\$outcome"_bracken.out | sort -k7 -nr - | head > ${pair_id}_"\$outcome"_brackensort.tab
 	else
 	echo "ID not required"
 	fi
