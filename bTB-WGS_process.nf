@@ -37,8 +37,9 @@
 *	Version 0.9.0	10/09/19	Filter and mask vcf for consensus calling
 *	Version 0.9.1	19/09/19	Remove SNP filtering and annotation process as no longer required
 *	Version 0.9.2	20/09/19	Exclude indels from consensus calling step
-*	Version 0.9.3   11/10/19    Move ReadStats to standalone shell script
+*	Version 0.9.3   11/10/19	Move ReadStats to standalone shell script
 *	Version 0.9.4	17/10/19	Add Data source and datestamp to output files and directories
+*	Version 0.9.5	20/12/19	Update to Python3 and lastest samtools/bcftools (1.10)
 */
 
 /* Default parameters */
@@ -166,9 +167,9 @@ process VarCall {
 
 	"""
 	samtools index ${pair_id}.mapped.sorted.bam
-	$dependpath/bcftools/bcftools mpileup -Q 10 -Ou -f $ref ${pair_id}.mapped.sorted.bam |
-	 $dependpath/bcftools/bcftools call --ploidy 1 -cf GQ - -Ou |
-	 $dependpath/bcftools/bcftools norm -f $ref - -Oz -o ${pair_id}.norm.vcf.gz
+	bcftools mpileup -Q 10 -Ou -f $ref ${pair_id}.mapped.sorted.bam |
+	 bcftools call --ploidy 1 -cf GQ - -Ou |
+	 bcftools norm -f $ref - -Oz -o ${pair_id}.norm.vcf.gz
 	"""
 }
 
@@ -217,9 +218,9 @@ process VCF2Consensus {
 	set pair_id, file("${pair_id}_consensus.fas") into consensus
 
 	"""
-	$dependpath/bcftools/bcftools filter --IndelGap 5 -e 'DP<5 && AF<0.8' ${pair_id}.norm.vcf.gz -Ob -o ${pair_id}.norm-flt.bcf
-	$dependpath/bcftools/bcftools index ${pair_id}.norm-flt.bcf
-	$dependpath/bcftools/bcftools consensus -f $ref -e 'TYPE="indel"' -m ${pair_id}_RptZeroMask.bed ${pair_id}.norm-flt.bcf |
+	bcftools filter --IndelGap 5 -e 'DP<5 && AF<0.8' ${pair_id}.norm.vcf.gz -Ob -o ${pair_id}.norm-flt.bcf
+	bcftools index ${pair_id}.norm-flt.bcf
+	bcftools consensus -f $ref -e 'TYPE="indel"' -m ${pair_id}_RptZeroMask.bed ${pair_id}.norm-flt.bcf |
 	 sed '/^>/ s/.*/>${pair_id}/' > ${pair_id}_consensus.fas
 	"""
 }
@@ -240,7 +241,7 @@ raw_uniq
 	.set { input4stats }
 
 /* Generation of data quality and mapping statistics
-Calculate numbe of raw reads, unique reads, trimmed reads, proportion aligned to reference genome */
+Calculate number of raw reads, unique reads, trimmed reads, proportion aligned to reference genome */
 
 process ReadStats{
 	errorStrategy 'finish'
@@ -284,7 +285,7 @@ process AssignClusterCSS{
 
 	"""
 	gunzip -c ${pair_id}.norm.vcf.gz > ${pair_id}.pileup.vcf
-	python $pypath/Stage1-test.py ${pair_id}_stats.csv ${stage1pat} $ref test ${min_mean_cov} ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} ${min_qual_nonsnp} ${pair_id}.pileup.vcf
+	python3 $pypath/Stage1-test.py ${pair_id}_stats.csv ${stage1pat} $ref test ${min_mean_cov} ${min_cov_snp} ${alt_prop_snp} ${min_qual_snp} ${min_qual_nonsnp} ${pair_id}.pileup.vcf
 	mv _stage1.csv ${pair_id}_stage1.csv
 	"""
 }

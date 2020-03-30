@@ -1,6 +1,7 @@
 
 import csv, pickle, operator, os, sys         
 import collections
+from functools import reduce
 
 #   parsing the arguments
 args=sys.argv
@@ -30,7 +31,7 @@ else:
     thqualnonsnp=int(sys.argv[9])
     strainVCF=sys.argv[10]
 
-patternsDetailsFile="CSSnewclusters_LT708304_040719.csv" #"CSSnewclusters_181115.csv" #"patterns20131220.csv"
+patternsDetailsFile="CSSnewclusters_LT708304_230119.csv" #"CSSnewclusters_181115.csv" #"patterns20131220.csv" "CSSnewclusters_LT708304_181217.csv"
 patternsBritishBTBFile="patternsBritishBTB_LT708304.csv"
 patternsPinnipediiFile="patternsPinnipedii_LT708304.csv"
 patternsMic_PinFile="patternsMic_Pin_LT708304.csv"
@@ -41,7 +42,7 @@ patternsBTBFile="patternsBTB_LT708304.csv"
 # reads a csv file
 # return a list where each element is a list containing the element of a row.
 def readTable(fname,ch):
-    infile=open(fname,"rb")
+    infile=open(fname,"r")
     data = csv.reader(infile, delimiter=ch)
     dataOut = [row for row in data]
     infile.close()
@@ -51,14 +52,16 @@ def readTable(fname,ch):
 # writes a list into a csv file
 # each element in the list is written as a row in the csv file
 def writeCSV(fname,matrix):
-    with open(fname, "wb") as fileOut:
+    with open(fname, "w") as fileOut:
         writer = csv.writer(fileOut)
         writer.writerows(matrix)
-        print "file "+fname+" saved."
+        print("file "+fname+" saved.")
 
 # transposes a python list 
 def listT(matrix):
-    return map(list, zip(*matrix))
+    zipped = zip(*matrix)
+    output = [list(item) for item in zipped]
+    return output
 
 # compares a strain gSS base calls (strpat) to the a genotype group pattern give by groPat
 # strPat is the reference patern.
@@ -69,7 +72,7 @@ def listT(matrix):
 def comparePatterns(refPat,strPat,groPat):
     lenPat=len(refPat)
     if lenPat!=len(strPat) or lenPat!=len(groPat):
-        print "Different values refPat,strPat,groPat: "+str(lenPat)+"  "+str(len(strPat))+"  "+str(len(groPat))
+        print("Different values refPat,strPat,groPat: "+str(lenPat)+"  "+str(len(strPat))+"  "+str(len(groPat)))
     res=[]
     for i in range(lenPat):
         if strPat[i].upper()=="N":
@@ -138,7 +141,7 @@ def findGenotypeOneSample(strainsDetailsTittle,strainDetails,pathTBRuns,patterns
                     if Pinnipedii[0]=="Pinnipedii" and Pinnipedii[2]>=70:
                         flag="Pinnipedii"
                         maxPat=strainDetails+[flag]+Pinnipedii
-                        print maxPat
+                        print(maxPat)
                         return [maxPat,"NA"]
                     else:
                         flag="MicPin"
@@ -151,12 +154,12 @@ def findGenotypeOneSample(strainsDetailsTittle,strainDetails,pathTBRuns,patterns
     else:
         flag="LowCoverage"
         maxPat=strainDetails+[flag]+6*["NA"]
-        print maxPat
+        print(maxPat)
         return [maxPat,"NA"] 
 
 
 def getSnpsStatsStrain(strainStatsFileName,listas,pathAux,thMinGoodCov,thCovProp,thqualsnp,thqualnonsnp):
-    print "loading "+ strainStatsFileName
+    print("loading "+ strainStatsFileName)
     
     fileIn = open(strainVCF, 'r')
     csv=fileIn.readlines()
@@ -191,8 +194,9 @@ def getSnpsStatsStrain(strainStatsFileName,listas,pathAux,thMinGoodCov,thCovProp
                 nu=[i,call,qual,gcovRF+gcovRR+gcovAF+gcovAR,gcovRF,gcovRR,gcovAF,gcovAR]
             out=out+[nu]
         listasOut=listasOut+[out]
-    print "snps Extracted in lists of length:"
-    print map(len,listasOut)
+    print("snps Extracted in lists of length:")
+    itemLen = [len(item) for item in listasOut]
+    print(itemLen)
     os.system("rm "+strainVCF)
     return listasOut
 
@@ -208,7 +212,7 @@ def readTVSFile(fname):
     return dataOut
 
 def getBestMatchPattern(patternsDetails,strainGSSInfo):
-    print "matching positions:"
+    print("matching positions:")
     hal=[int(x) for x in patternsDetails[0][1:]]==[x[0] for x in strainGSSInfo]
     if hal==False:sys.exit("matching positions is false")
     strainGSS=[x[1] for x in strainGSSInfo]
@@ -234,7 +238,7 @@ def getBestMatchPattern(patternsDetails,strainGSSInfo):
     return [maxPat,strainQ]
 
 
-print TBRun
+print(TBRun)
 refName=refName.split(".")[0]
 strainDetailsFile=instats
 pathResutls=os.path.join(TBRun,"Stage1")
@@ -254,7 +258,7 @@ strainsInfo=listT(strainsInfo)
 strainsDetails=listT([strainsInfo[pfileName][1:],strainsInfo[genomeCov][1:],strainsInfo[pmeanCov][1:],strainsInfo[totalReads][1:],strainsInfo[ppermap][1:],strainsInfo[outcome][1:]])
 
 strainsDetails=[['Sample','GenomeCov','MeanDepth','NumRawReads','pcMapped','Outcome',]]+strainsDetails
-print "Processing "+ str(len(strainsDetails))+" samples"
+print("Processing "+ str(len(strainsDetails))+" samples")
 
 patternsDetails=listT(readTable(os.path.join(pathPatterns,patternsDetailsFile),","))
 patternsBritishBTBDetails=listT(readTable(os.path.join(pathPatterns,patternsBritishBTBFile),","))
@@ -270,7 +274,7 @@ maxPatsQ=[[[patternsDetails[0][0]]]+[["PredGenotype"],["M-MM-N-A"]]+[[x] for x i
 outFileName="_stage1.csv"
 
 for strainDetails in strainsDetails[1:]:
-    print strainDetails
+    print(strainDetails)
     [maxPat,strainQ]=findGenotypeOneSample(strainsDetails[0],strainDetails,pathTBRuns,patternsDetails,patternsBritishBTBDetails,patternsBTBDetails,patternsMic_PinDetails,patternsMicrotiDetails,patternsPinnipediiDetails,refName,qth,pathAux,thMinGoodCov,thCovProp,thqualsnp,thqualnonsnp)
     maxPats=maxPats+[maxPat]
     if strainQ!="NA":
