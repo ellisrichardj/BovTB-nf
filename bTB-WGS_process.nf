@@ -322,7 +322,7 @@ process IDnonbovis{
 	if [ \$outcome != "Pass" ]; then
 	$dependpath/Kraken2/kraken2 --threads 2 --quick $lowmem --db $kraken2db --output - --report ${pair_id}_"\$outcome"_kraken2.tab --paired ${pair_id}_trim_R1.fastq  ${pair_id}_trim_R2.fastq 
 	$dependpath/Bracken-2.5.3/bracken -d $kraken2db -r 150 -l S -t 10 -i ${pair_id}_"\$outcome"_kraken2.tab -o ${pair_id}_"\$outcome"_bracken.out
-	sed 1d ${pair_id}_"\$outcome"_bracken.out | sort -k7 -nr - | head > ${pair_id}_"\$outcome"_brackensort.tab
+	sed 1d ${pair_id}_"\$outcome"_bracken.out | sort -k7 -nr - | head -20 > ${pair_id}_"\$outcome"_brackensort.tab
 	else
 	echo "ID not required"
 	fi
