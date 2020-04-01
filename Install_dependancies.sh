@@ -67,7 +67,7 @@ cd ../..
 
 wget https://github.com/jenniferlu717/Bracken/archive/v2.5.3.tar.gz && tar xzf v2.5.3.tar.gz && rm -f v2.5.3.tar.gz
 cd Bracken-2.5.3
-./install_bracken.sh ../bracken
+sh ./install_bracken.sh ../bracken
 cd ..
 
 # Add locations to nextflow.config
