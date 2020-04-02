@@ -11,6 +11,7 @@ It has been built to run using nextflow, using standard bioinformatic tools for 
 -	samtools and bcftools
 -	bedtools
 -	Kraken2 (and database)
+-	Bracken
 
 ## Installation
 
