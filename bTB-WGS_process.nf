@@ -300,7 +300,7 @@ Outcome
 
 /* Identify any non-M.bovis samples using kraken
 Samples with flag != 'Pass' are processed to detemine which microbe is present 
-Bracken parses the output to generate a top 10 list of species*/
+Bracken parses the output which is then sorted to generate a top 20 list of species */
 
 process IDnonbovis{
 	errorStrategy 'finish'
@@ -316,13 +316,14 @@ process IDnonbovis{
 
 	output:
 	set pair_id, file("${pair_id}_*_brackensort.tab") optional true into IDnonbovis
+	set pair_id, file("${pair_id}_*_kraken2.tab") optional true into IDnonbovis
 
 	"""
 	outcome=\$(cat outcome.txt)
 	if [ \$outcome != "Pass" ]; then
 	$dependpath/Kraken2/kraken2 --threads 2 --quick $lowmem --db $kraken2db --output - --report ${pair_id}_"\$outcome"_kraken2.tab --paired ${pair_id}_trim_R1.fastq  ${pair_id}_trim_R2.fastq 
 	$dependpath/Bracken-2.5.3/bracken -d $kraken2db -r 150 -l S -t 10 -i ${pair_id}_"\$outcome"_kraken2.tab -o ${pair_id}_"\$outcome"_bracken.out
-	sed 1d ${pair_id}_"\$outcome"_bracken.out | sort -k7 -nr - | head -20 > ${pair_id}_"\$outcome"_brackensort.tab
+	sed 1d ${pair_id}_"\$outcome"_bracken.out | sort -t $'\t' -k7,7 -nr - | head -20 > ${pair_id}_"\$outcome"_brackensort.tab
 	else
 	echo "ID not required"
 	fi
