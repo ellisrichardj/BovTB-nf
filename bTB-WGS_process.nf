@@ -315,9 +315,8 @@ process IDnonbovis{
 	val lowmem from lowmem
 
 	output:
-	set pair_id, file("${pair_id}_*_brackensort.tab") optional true into IDnonbovis
-	set pair_id, file("${pair_id}_*_kraken2.tab") optional true into IDnonbovis
-
+	set pair_id, file("${pair_id}_*_brackensort.tab"), file("${pair_id}_*_kraken2.tab") optional true into IDnonbovis
+	
 	"""
 	outcome=\$(cat outcome.txt)
 	if [ \$outcome != "Pass" ]; then
