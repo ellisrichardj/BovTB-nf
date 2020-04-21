@@ -41,6 +41,7 @@
 *	Version 0.9.4	17/10/19	Add Data source and datestamp to output files and directories
 *	Version 0.9.5	20/12/19	Update to Python3 and lastest samtools/bcftools (1.10)
 *	Version 0.9.6	30/03/20	Add Bracken for parsing kraken2 output
+*	Version 0.9.7	21/04/20	Determine presence of M.bovis in low quality samples
 */
 
 /* Default parameters */
@@ -315,14 +316,19 @@ process IDnonbovis{
 	val lowmem from lowmem
 
 	output:
-	set pair_id, file("${pair_id}_*_brackensort.tab"), file("${pair_id}_*_kraken2.tab") optional true into IDnonbovis
-	
+	set pair_id, file("${pair_id}_*_brackensort.tab"), file("${pair_id}_*_kraken2.tab")  optional true into IDnonbovis
+	set pair_id, file("${pair_id}_bovis.csv") optional true into QueryBovis
+
 	"""
 	outcome=\$(cat outcome.txt)
 	if [ \$outcome != "Pass" ]; then
 	$dependpath/Kraken2/kraken2 --threads 2 --quick $lowmem --db $kraken2db --output - --report ${pair_id}_"\$outcome"_kraken2.tab --paired ${pair_id}_trim_R1.fastq  ${pair_id}_trim_R2.fastq 
 	$dependpath/Bracken-2.5.3/bracken -d $kraken2db -r 150 -l S -t 10 -i ${pair_id}_"\$outcome"_kraken2.tab -o ${pair_id}_"\$outcome"_bracken.out
 	sed 1d ${pair_id}_"\$outcome"_bracken.out | sort -t \$'\t' -k7,7 -nr - | head -20 > ${pair_id}_"\$outcome"_brackensort.tab
+	$dependpath/Bracken-2.5.3/bracken -d $kraken2db -r150 -l S1 -i ${pair_id}_"\$outcome"_kraken2.tab -o ${pair_id}_"\$outcome"-S1_bracken.out
+	( sed -u 1q; sort -t \$'\t' -k7,7 -nr ) < ${pair_id}_"\$outcome"-S1_bracken.out > ${pair_id}_"\$outcome"-S1_brackensort.tab
+	BovPos=\$(grep 'variant bovis' ${pair_id}_"\$outcome"-S1_brackensort.tab)
+	echo "${pair_id}\t"\$BovPos" > ${pair_id}_bovis.csv
 	else
 	echo "ID not required"
 	fi
@@ -336,6 +342,8 @@ process IDnonbovis{
 AssignCluster
 	.collectFile( name: "${params.DataDir}_AssignedWGSCluster_${params.today}.csv", sort: true, storeDir: "$PWD/Results_${params.DataDir}_${params.today}", keepHeader: true )
 
+QueryBovis
+	.collectFile( name: "${params.DataDir}_BovPos_${params.today}.tsv", sort: true, storeDir: "$PWD/Results_${params.DataDir}_${params.today}"
 
 workflow.onComplete {
 		log.info "Completed sucessfully:	$workflow.success"		
