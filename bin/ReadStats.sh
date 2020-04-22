@@ -3,14 +3,15 @@
 #  ReadStats.sh
 #  
 #
-#  Created by richardellis on 10/10/2019.
+#  Created by ellisrichardj on 10/10/2019.
 #  
 
-#  Define inputs
+#  Define inputs - sample name
 
 pair_id=$1
 
-# Cout reads in each catagory
+# Count reads in each catagory, using '+' as the only character on a line (^+$) as a proxy in fastq files 
+# In fastq format '+' appears on the line between basecalls and quality scores for a given read
 
     raw_R1=$(zgrep -c "^+$" ${pair_id}_*_R1_*.fastq.gz) # counts number of reads in file
     rm ${pair_id}_*_R1_*.fastq.gz
@@ -18,8 +19,8 @@ pair_id=$1
     uniq_R1=$(grep -c "^+$" ${pair_id}_uniq_R1.fastq) # counts number of reads in file
     rm `readlink ${pair_id}_uniq_R2.fastq`
     trim_R1=$(grep -c "^+$" ${pair_id}_trim_R1.fastq) # counts number of reads in file
-    num_map=$(samtools view -c ${pair_id}.mapped.sorted.bam)
-    samtools depth -a ${pair_id}.mapped.sorted.bam > depth.txt
+    num_map=$(samtools view -c ${pair_id}.mapped.sorted.bam) # samtools counts the number of mapped reads
+    samtools depth -a ${pair_id}.mapped.sorted.bam > depth.txt # samtools outputs depth at each position
     avg_depth=$(awk '{sum+=$3} END { print sum/NR}' depth.txt)
     zero_cov=$(awk '$3<1 {++count} END {print count}' depth.txt)
     sites=$(awk '{++count} END {print count}' depth.txt)
@@ -37,9 +38,9 @@ pair_id=$1
 
 # Define thresholds for flag assignment
 
-    mindepth=10
-    minpc=60
-    minreads=600000
+    mindepth=10 # require an average of at least 10 reads per site 
+    minpc=60 # require at least 60% of data maps to genome
+    minreads=600000 # require at least 600,000 raw reads per sample
     
 # This section assigns 'flags' based on the number of reads and the proportion mapping to reference genome
     
