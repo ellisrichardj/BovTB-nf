@@ -327,7 +327,7 @@ process IDnonbovis{
 	sed 1d ${pair_id}_"\$outcome"_bracken.out | sort -t \$'\t' -k7,7 -nr - | head -20 > ${pair_id}_"\$outcome"_brackensort.tab
 	$dependpath/Bracken-2.5.3/bracken -d $kraken2db -r150 -l S1 -i ${pair_id}_"\$outcome"_kraken2.tab -o ${pair_id}_"\$outcome"-S1_bracken.out
 	( sed -u 1q; sort -t \$'\t' -k7,7 -nr ) < ${pair_id}_"\$outcome"-S1_bracken.out > ${pair_id}_"\$outcome"-S1_brackensort.tab
-	BovPos=\$(grep 'variant bovis' ${pair_id}_"\$outcome"-S1_brackensort.tab)
+	BovPos=\$(grep 'variant bovis' ${pair_id}_"\$outcome"-S1_brackensort.tab || true)
 	echo "${pair_id}\t"\$BovPos"" > ${pair_id}_bovis.csv
 	else
 	echo "ID not required"
