@@ -27,7 +27,7 @@
 *	Version 0.7.5	08/03/19	Further correction of mapping stats and addition of success flags
 *	Version 0.8.0	12/03/19	Add kraken to ID samples that fail cluster assignment
 *	Version 0.8.1	13/03/19	Update to kraken2
-*	Version 0.8.2	14/03/19	Define loction of kraken2 database as a nextflow parameter
+*	Version 0.8.2	14/03/19	Define location of kraken2 database as a nextflow parameter
 *	Version 0.8.3	14/03/19	Add option to reduce memory use by kraken2 if required
 *	Verison 0.8.4	15/03/19	Correct output location of kraken2 tables
 *	Version 0.8.5	25/03/19	Output bam, vcf and consensus to Results directory
@@ -42,6 +42,7 @@
 *	Version 0.9.5	20/12/19	Update to Python3 and lastest samtools/bcftools (1.10)
 *	Version 0.9.6	30/03/20	Add Bracken for parsing kraken2 output
 *	Version 0.9.7	21/04/20	Determine presence of M.bovis in low quality samples
+*	Version 0.9.8	30/04/20	Output snp table in tsv format for each sample
 */
 
 /* Default parameters */
@@ -204,12 +205,13 @@ maskbed
 	.join(vcf2)
 	.set { vcf_bed }
 
-/* Consensus calling */
+/* Consensus calling and output snp table for snippy compatability */
 process VCF2Consensus {
 	errorStrategy 'finish'
     tag "$pair_id"
 
 	publishDir "$params.outdir/Results_${params.DataDir}_${params.today}/consensus", mode: 'copy', pattern: '*_consensus.fas'
+	publishDir "$params.outdir/Results_${params.DataDir}_${params.today}/snpTables", mode: 'copy', pattern: '*_snps.tab'
 
 	maxForks 2
 
@@ -218,12 +220,15 @@ process VCF2Consensus {
 
 	output:
 	set pair_id, file("${pair_id}_consensus.fas") into consensus
+	set pair_id, file("${pair_id}_snps.tab") into snpstab
 
 	"""
 	bcftools filter --IndelGap 5 -e 'DP<5 && AF<0.8' ${pair_id}.norm.vcf.gz -Ob -o ${pair_id}.norm-flt.bcf
 	bcftools index ${pair_id}.norm-flt.bcf
 	bcftools consensus -f $ref -e 'TYPE="indel"' -m ${pair_id}_RptZeroMask.bed ${pair_id}.norm-flt.bcf |
 	 sed '/^>/ s/.*/>${pair_id}/' > ${pair_id}_consensus.fas
+	echo "CHROM\tPOS\tTYPE\tREF\tALT\tEVIDENCE" > ${pair_id}_snps.tab
+	bcftools query -f '%CHROM\t%POS\t%TYPE\t%REF\t%ALT\t%ALT:%INFO/AO %REF:%INFO/RO\n' ${pair_id}.norm-flt.bcf.gz >> ${pair_id}_snps.tab
 	"""
 }
 
@@ -300,7 +305,7 @@ Outcome
 	.set { IDdata }
 
 /* Identify any non-M.bovis samples using kraken
-Samples with flag != 'Pass' are processed to detemine which microbe is present 
+Samples with flag != 'Pass' are processed to detemine which microbe(s) are present 
 Bracken parses the output which is then sorted to generate a top 20 list of species */
 
 process IDnonbovis{
