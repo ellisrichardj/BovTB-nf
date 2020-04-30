@@ -228,7 +228,7 @@ process VCF2Consensus {
 	bcftools consensus -f $ref -e 'TYPE="indel"' -m ${pair_id}_RptZeroMask.bed ${pair_id}.norm-flt.bcf |
 	 sed '/^>/ s/.*/>${pair_id}/' > ${pair_id}_consensus.fas
 	echo "CHROM\tPOS\tTYPE\tREF\tALT\tEVIDENCE" > ${pair_id}_snps.tab
-	bcftools query -f '%CHROM\t%POS\t%TYPE\t%REF\t%ALT\t%ALT:%INFO/AO %REF:%INFO/RO\n' ${pair_id}.norm-flt.bcf.gz >> ${pair_id}_snps.tab
+	bcftools query -f '%CHROM\t%POS\t%TYPE\t%REF\t%ALT\t%ALT:%INFO/AO %REF:%INFO/RO\n' ${pair_id}.norm-flt.bcf >> ${pair_id}_snps.tab
 	"""
 }
 
