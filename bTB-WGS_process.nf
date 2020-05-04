@@ -307,7 +307,8 @@ Outcome
 
 /* Identify any non-M.bovis samples using kraken
 Samples with flag != 'Pass' are processed to detemine which microbe(s) are present 
-Bracken parses the output which is then sorted to generate a top 20 list of species */
+Bracken parses the output which is then sorted to generate a top 20 list of species
+Presence / absence of M.bovis is also determined by parsing Bracken output */
 
 process IDnonbovis{
 	errorStrategy 'finish'
@@ -323,7 +324,7 @@ process IDnonbovis{
 
 	output:
 	set pair_id, file("${pair_id}_*_brackensort.tab"), file("${pair_id}_*_kraken2.tab")  optional true into IDnonbovis
-	file("${pair_id}_bovis.tsv") optional true into QueryBovis
+	file("${pair_id}_bovis.csv") optional true into QueryBovis
 
 	"""
 	outcome=\$(cat outcome.txt)
@@ -333,8 +334,10 @@ process IDnonbovis{
 	sed 1d ${pair_id}_"\$outcome"_bracken.out | sort -t \$'\t' -k7,7 -nr - | head -20 > ${pair_id}_"\$outcome"_brackensort.tab
 	$dependpath/Bracken-2.5.3/bracken -d $kraken2db -r150 -l S1 -i ${pair_id}_"\$outcome"_kraken2.tab -o ${pair_id}_"\$outcome"-S1_bracken.out
 	( sed -u 1q; sort -t \$'\t' -k7,7 -nr ) < ${pair_id}_"\$outcome"-S1_bracken.out > ${pair_id}_"\$outcome"-S1_brackensort.tab
-	BovPos=\$(grep 'variant bovis' ${pair_id}_"\$outcome"-S1_brackensort.tab || true)
-	echo "${pair_id}\t"\$BovPos"" > ${pair_id}_bovis.tsv
+	BovPos=\$(grep 'variant bovis' ${pair_id}_"\$outcome"-S1_brackensort.tab || true |
+	 awk '{print \$1" "\$2" "\$3" "\$4","\$9","(\$10*100)}')
+	echo "Sample,ID,TotalReads,Abundance" > ${pair_id}_bovis.csv
+	echo "${pair_id}\t"\$BovPos"" >> ${pair_id}_bovis.csv
 	else
 	echo "ID not required"
 	fi
@@ -349,7 +352,7 @@ AssignCluster
 	.collectFile( name: "${params.DataDir}_AssignedWGSCluster_${params.today}.csv", sort: true, storeDir: "$PWD/Results_${params.DataDir}_${params.today}", keepHeader: true )
 
 QueryBovis
-	.collectFile( name: "${params.DataDir}_BovPos_${params.today}.tsv", sort: true, storeDir: "$PWD/Results_${params.DataDir}_${params.today}" )
+	.collectFile( name: "${params.DataDir}_BovPos_${params.today}.csv", sort: true, storeDir: "$PWD/Results_${params.DataDir}_${params.today}", keepHeader: true )
 
 workflow.onComplete {
 		log.info "Completed sucessfully:	$workflow.success"		
