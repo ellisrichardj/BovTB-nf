@@ -49,7 +49,7 @@
 params.lowmem = ""
 params.reads = "$PWD/*_{S*_R1,S*_R2}*.fastq.gz"
 params.outdir = "$PWD"
-lowmem = Channel.value("${params.lowmem}")
+lowmem = Channel.value(params.lowmem)
 
 ref = file(params.ref)
 refgbk = file(params.refgbk)
@@ -146,8 +146,8 @@ process Map2Ref {
 
 	"""
 	$dependpath/bwa/bwa mem -M -t2 $ref  ${pair_id}_trim_R1.fastq ${pair_id}_trim_R2.fastq |
-	 samtools view -@2 -ShuF 2308 - |
-	 samtools sort -@2 - -o ${pair_id}.mapped.sorted.bam
+	 $dependpath/samtools-1.10/samtools view -@2 -ShuF 2308 - |
+	 $dependpath/samtools-1.10/samtools sort -@2 - -o ${pair_id}.mapped.sorted.bam
 	"""
 }
 
@@ -169,7 +169,7 @@ process VarCall {
 	set pair_id, file("${pair_id}.norm.vcf.gz") into vcf2
 
 	"""
-	samtools index ${pair_id}.mapped.sorted.bam
+	$dependpath/samtools-1.10/samtools index ${pair_id}.mapped.sorted.bam
 	bcftools mpileup -Q 10 -Ou -f $ref ${pair_id}.mapped.sorted.bam |
 	 bcftools call --ploidy 1 -cf GQ - -Ou |
 	 bcftools norm -f $ref - -Oz -o ${pair_id}.norm.vcf.gz
@@ -334,8 +334,8 @@ process IDnonbovis{
 	sed 1d ${pair_id}_"\$outcome"_bracken.out | sort -t \$'\t' -k7,7 -nr - | head -20 > ${pair_id}_"\$outcome"_brackensort.tab
 	$dependpath/Bracken-2.5.3/bracken -d $kraken2db -r150 -l S1 -i ${pair_id}_"\$outcome"_kraken2.tab -o ${pair_id}_"\$outcome"-S1_bracken.out
 	( sed -u 1q; sort -t \$'\t' -k7,7 -nr ) < ${pair_id}_"\$outcome"-S1_bracken.out > ${pair_id}_"\$outcome"-S1_brackensort.tab
-	BovPos=\$(grep 'variant bovis' ${pair_id}_"\$outcome"-S1_brackensort.tab || true |
-	 awk '{print \$1" "\$2" "\$3" "\$4","\$9","(\$10*100)}')
+	BovPos=\$(grep 'variant bovis' ${pair_id}_"\$outcome"-S1_brackensort.tab |
+	 awk '{print \$1" "\$2" "\$3" "\$4","\$9","(\$10*100)}' || true)
 	echo "Sample,ID,TotalReads,Abundance" > ${pair_id}_bovis.csv
 	echo "${pair_id}\t"\$BovPos"" >> ${pair_id}_bovis.csv
 	else
