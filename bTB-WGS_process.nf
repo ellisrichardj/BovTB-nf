@@ -337,7 +337,7 @@ process IDnonbovis{
 	BovPos=\$(grep 'variant bovis' ${pair_id}_"\$outcome"-S1_brackensort.tab |
 	 awk '{print \$1" "\$2" "\$3" "\$4","\$9","(\$10*100)}' || true)
 	echo "Sample,ID,TotalReads,Abundance" > ${pair_id}_bovis.csv
-	echo "${pair_id}\t"\$BovPos"" >> ${pair_id}_bovis.csv
+	echo "${pair_id},"\$BovPos"" >> ${pair_id}_bovis.csv
 	else
 	echo "ID not required"
 	fi
