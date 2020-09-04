@@ -72,8 +72,8 @@ cd ..
 
 # Add locations to nextflow.config
 
-echo "params.dependPath = "\"$PWD"\"" >> BovTB-nf/nextflow.config
-echo "params.kraken2db = "\"$PWD"/Kraken2/db\"" >> BovTB-nf/nextflow.config
+echo "params.dependPath = "\"$PWD"\"" >> ./nextflow.config
+echo "params.kraken2db = "\"$PWD"/Kraken2/db\"" >> ./nextflow.config
 
 echo "Dependancies installed successfully!"
 

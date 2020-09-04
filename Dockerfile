@@ -1,8 +1,20 @@
-FROM ubuntu:latest
+FROM ubuntu:20.04
+WORKDIR /BovTB-nf/
+
+################## METADATA ######################
+LABEL base.image="ubuntu:20.04"
+LABEL software="Bovine-TB Pipeline Image"
+LABEL about.summary="Bioinformatics Pipeline for analysis of Bovine TB fastq reads"
+LABEL about.documentation="https://github.com/ellisrichardj/BovTB-nf"
+LABEL about.tags="Genomics, WGS"
+
+
+################## DEPENDENCIES ######################
 
 # apt-get dependencies
-RUN apt-get -y update 
-RUN apt-get install -y sudo \
+RUN apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    openjdk-8-jdk \
+    sudo \
     wget \
     make \
     git \
@@ -12,7 +24,9 @@ RUN apt-get install -y sudo \
     libncurses5-dev \
     libncursesw5-dev \
     libghc-bzlib-prof \
-    gcc unzip zlib1g-dev \
+    gcc \
+    unzip \
+    zlib1g-dev \
     libncurses5-dev \
     libbz2-dev \
     liblzma-dev \
@@ -21,17 +35,26 @@ RUN apt-get install -y sudo \
     python3-numpy \
     python3-pip
 
-# Setup Sudo. Thanks: https://stackoverflow.com/questions/25845538/how-to-use-sudo-inside-a-docker-container
-RUN adduser --disabled-password --gecos '' docker
-RUN adduser docker sudo
-RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-USER docker
+# Install nextflow.
+# ENV line required to set jvm memory and cpu limits to docker. 
+# see: https://github.com/nextflow-io/nextflow/blob/v20.07.1/docker/Dockerfile
+ENV NXF_OPTS='-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap' NXF_HOME=/.nextflow
+COPY install_nextflow-20.7.1.bash ./install_nextflow.bash
+RUN cat ./install_nextflow.bash | bash
+RUN ln -s $PWD/nextflow /usr/local/bin/nextflow
 
-# Setup python 
+# # Setup Sudo. Thanks: https://stackoverflow.com/questions/25845538/how-to-use-sudo-inside-a-docker-container
+# RUN adduser --disabled-password --gecos '' docker
+# RUN adduser docker sudo
+# RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+# USER docker
+
+# python 
 RUN pip3 install biopython
-RUN sudo ln -s /usr/bin/python3 /usr/bin/python
+RUN ln -s /usr/bin/python3 /usr/bin/python
 
-# Install Dependencies
-RUN sudo mkdir -p /BovTB-nf/
-COPY ./Install_dependancies.sh /Install_dependancies.sh
-RUN sudo sh /Install_dependancies.sh
+# bovtb-tools
+COPY ./Install_dependancies.sh ./Install_dependancies.sh
+RUN sh ./Install_dependancies.sh
+
+CMD ["nextflow"]
