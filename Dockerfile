@@ -58,4 +58,4 @@ COPY ./bTB-WGS_process.nf ./
 
 ################## ENTRY ######################
 
-CMD /bin/bash/
+CMD /bin/bash
