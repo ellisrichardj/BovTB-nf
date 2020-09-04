@@ -43,12 +43,6 @@ COPY install_nextflow-20.7.1.bash ./install_nextflow.bash
 RUN cat ./install_nextflow.bash | bash
 RUN ln -s $PWD/nextflow /usr/local/bin/nextflow
 
-# # Setup Sudo. Thanks: https://stackoverflow.com/questions/25845538/how-to-use-sudo-inside-a-docker-container
-# RUN adduser --disabled-password --gecos '' docker
-# RUN adduser docker sudo
-# RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-# USER docker
-
 # python 
 RUN pip3 install biopython
 RUN ln -s /usr/bin/python3 /usr/bin/python
@@ -57,4 +51,6 @@ RUN ln -s /usr/bin/python3 /usr/bin/python
 COPY ./Install_dependancies.sh ./Install_dependancies.sh
 RUN sh ./Install_dependancies.sh
 
-CMD ["nextflow"]
+COPY ./bTB-WGS_process.nf ./
+
+CMD /bin/bash/
