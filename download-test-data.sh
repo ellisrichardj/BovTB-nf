@@ -1,3 +1,5 @@
+# This file downloads some test data for the Bovine TB pipeline
+
 cd ..
 
 mkdir TestData
