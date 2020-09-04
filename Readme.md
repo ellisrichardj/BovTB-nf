@@ -27,6 +27,12 @@ Alternatively, clone the repository:
 
 If required, there is simple script for installing the dependancies (helpfully called Install_dependancies.sh), which will also update the nextflow config file with their locations.
 
+# Docker build
+
+Alternatively, the pipeline can run in an ubuntu image on docker. 
+To build the image:
+`docker build /PATH/TO/REPO/ -t bov-tb`
+
 -------------
 
 ## Examples
