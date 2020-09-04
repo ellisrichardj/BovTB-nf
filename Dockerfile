@@ -1,10 +1,11 @@
 FROM ubuntu:20.04
 WORKDIR /BovTB-nf/
 
-################## METADATA ######################
+################## METADATA ##########################
+
 LABEL base.image="ubuntu:20.04"
 LABEL software="Bovine-TB Pipeline Image"
-LABEL about.summary="Bioinformatics Pipeline for analysis of Bovine TB fastq reads"
+LABEL about.summary="Bioinformatics Pipeline for post-processing of Bovine TB fastq reads"
 LABEL about.documentation="https://github.com/ellisrichardj/BovTB-nf"
 LABEL about.tags="Genomics, WGS"
 
@@ -52,5 +53,8 @@ COPY ./Install_dependancies.sh ./Install_dependancies.sh
 RUN sh ./Install_dependancies.sh
 
 COPY ./bTB-WGS_process.nf ./
+
+
+################## ENTRY ######################
 
 CMD /bin/bash/
