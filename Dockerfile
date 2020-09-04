@@ -48,10 +48,11 @@ RUN ln -s $PWD/nextflow /usr/local/bin/nextflow
 RUN pip3 install biopython
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
-# bovtb-tools
+# bovtb tools
 COPY ./Install_dependancies.sh ./Install_dependancies.sh
 RUN sh ./Install_dependancies.sh
 
+# pipeline
 COPY ./bTB-WGS_process.nf ./
 
 
