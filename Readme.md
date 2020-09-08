@@ -27,6 +27,15 @@ Alternatively, clone the repository:
 
 If required, there is simple script for installing the dependancies (helpfully called Install_dependancies.sh), which will also update the nextflow config file with their locations.
 
+# Docker build
+
+Alternatively, the pipeline can run in an ubuntu image on docker. 
+To build the image:
+`docker build /PATH/TO/REPO/ -t bov-tb`
+
+Run a docker container in bash:
+`docker run --rm -it bov-tb`
+
 -------------
 
 ## Examples
@@ -35,7 +44,3 @@ In its simplest form just run the Nextflow process from the directory containing
 
 	cd /path/to/Data
 	nextflow run BovTB-nf
-
-
-
-
